@@ -84,6 +84,14 @@ export default function App() {
         return lp.initData.user;
       }
 
+      // Tenta via URL Search Params (fallback manual)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlId = urlParams.get('tgId') || urlParams.get('userId') || urlParams.get('id');
+      if (urlId) {
+        console.log("ID detectado via URL:", urlId);
+        return { id: parseInt(urlId), first_name: "Usuario", last_name: "URL" };
+      }
+
       // Se estiver em modo desenvolvimento (preview), simula um usuário para não ficar vazio
       if (window.location.hostname.includes('ais-dev') || window.location.hostname.includes('localhost') || window.location.hostname.includes('github.io')) {
          console.warn("Ambiente externo detectado. Simulando ID para testes.");
@@ -112,8 +120,13 @@ export default function App() {
     }
 
     setSdkReady(true);
-    loadArtists();
   }, []);
+
+  useEffect(() => {
+    if (tgId !== "000000" && sdkReady) {
+      loadArtists();
+    }
+  }, [tgId, sdkReady]);
 
   useEffect(() => {
     if (screen === 'artists' || screen === 'charts') {
@@ -232,9 +245,11 @@ export default function App() {
           {user && (
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--surface)] border border-[var(--border)]">
                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[var(--purple)] to-[var(--gold)] flex items-center justify-center text-[10px] font-bold">
-                 {user.firstName.charAt(0)}
+                 {(user.firstName || user.first_name || "U").charAt(0)}
                </div>
-               <span className="text-[10px] font-bold opacity-70">{user.username || user.firstName}</span>
+               <span className="text-[10px] font-bold opacity-70">
+                 {user.username || user.firstName || user.first_name || "Usuário"}
+               </span>
             </div>
           )}
         </div>

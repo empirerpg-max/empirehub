@@ -4,7 +4,8 @@ export interface Artist {
   nome: string;
   foto: string;
   saldo: number;
-  fortunaTotal: number;
+  fortuna_total: number; // Google Apps Script return name
+  fortunaTotal?: number; // Keep for safety if used elsewhere
   status: string;
   prestigio: number;
   fadiga: number;
@@ -17,7 +18,16 @@ export const apiService = {
       const response = await fetch(`${SCRIPT_URL}?acao=get_artistas_by_tg&tg_id=${tgId}`);
       if (!response.ok) throw new Error("Network response was not ok");
       const data = await response.json();
-      return Array.isArray(data) ? data : [];
+      const artists = Array.isArray(data) ? data : [];
+      // Map to ensure both versions exist
+      return artists.map((a: any) => ({
+        ...a,
+        fortunaTotal: a.fortunaTotal || a.fortuna_total || 0,
+        fortuna_total: a.fortuna_total || a.fortunaTotal || 0,
+        fadiga: a.fadiga || 0,
+        prestigio: a.prestigio || 0,
+        saldo: a.saldo || 0
+      }));
     } catch (error) {
       console.error("Error fetching artists:", error);
       return [];
