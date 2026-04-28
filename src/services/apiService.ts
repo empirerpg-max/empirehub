@@ -57,5 +57,30 @@ export const apiService = {
       console.error("Error buying cinema:", error);
       return "Erro de conexão.";
     }
+  },
+
+  submitAction: async (params: { nome: string; acao: string; telegram_id: string }) => {
+    const { nome, acao, telegram_id } = params;
+    const url = `${SCRIPT_URL}?acao=registrar_ponto&nome=${encodeURIComponent(nome)}&tipo_acao=${encodeURIComponent(acao)}&telegram_id=${telegram_id}`;
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error submitting action:", error);
+      return { status: "error", message: "Conexão falhou" };
+    }
+  },
+
+  marketAction: async (params: { nome: string; acao: string; valor?: string }) => {
+    const { nome, acao, valor } = params;
+    const url = `${SCRIPT_URL}?acao=market_buy&nome=${encodeURIComponent(nome)}&item=${encodeURIComponent(acao)}&valor=${valor || ''}`;
+    try {
+      const response = await fetch(url);
+      return await response.json();
+    } catch (error) {
+      console.error("Error market action:", error);
+      return { status: "error", message: "Erro no Market" };
+    }
   }
 };

@@ -158,7 +158,24 @@ export default function App() {
     if (!selectedArtist) return;
     setLoading(true);
     safeHaptic();
-    alert(`Ação de "${actionCategory.toUpperCase()}" registrada para ${selectedArtist.nome}! Seus pontos serão processados.`);
+    
+    try {
+      const response = await apiService.submitAction({
+        nome: selectedArtist.nome,
+        acao: actionCategory,
+        telegram_id: tgId
+      });
+      
+      if (response && response.status === "success") {
+        alert(`Sucesso: ${response.message || 'Ação registrada!'}`);
+      } else {
+        alert(`Registrado: ${actionCategory.toUpperCase()} para ${selectedArtist.nome}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ação enviada para processamento.");
+    }
+
     await loadArtists(); 
     setScreen('dashboard');
     setLoading(false);
@@ -224,14 +241,46 @@ export default function App() {
   const formatImageUrl = (url: string | undefined | null) => {
     if (!url) return '';
     
-    // Converte links do Google Drive para links Diretos
+    // Handle Google Drive links (all common formats)
     if (url.includes('drive.google.com')) {
-      const match = url.match(/\/d\/([^\/]+)/);
-      if (match && match[1]) {
-        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      let id = '';
+      if (url.includes('/d/')) {
+        const match = url.match(/\/d\/([^\/?]+)/);
+        if (match) id = match[1];
+      } else if (url.includes('id=')) {
+        const match = url.match(/id=([^\/&?]+)/);
+        if (match) id = match[1];
       }
+      
+      if (id) return `https://lh3.googleusercontent.com/d/${id}=s800`;
     }
+    
+    // Ensure https
+    if (url.startsWith('http:')) return url.replace('http:', 'https:');
+    
     return url;
+  };
+
+  const handleMarketClick = async (item: string, price: string) => {
+    if (!selectedArtist) {
+      alert("Selecione um artista primeiro!");
+      return;
+    }
+    setLoading(true);
+    safeHaptic();
+    try {
+      const res = await apiService.marketAction({
+        nome: selectedArtist.nome,
+        acao: item,
+        valor: price
+      });
+      alert(`Solicitação de "${item}" enviada! Status: ${res.status || 'Processando'}`);
+      await loadArtists();
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao processar compra no Market.");
+    }
+    setLoading(false);
   };
 
   return (
@@ -923,7 +972,11 @@ export default function App() {
                         )}
                       >
                         <div className="bebas text-2xl opacity-20 w-6 text-center">{idx + 1}</div>
-                        <img src={art.foto || 'https://via.placeholder.com/150'} className="w-10 h-10 rounded-full border border-[var(--border)] object-cover" />
+                        <img 
+                          src={formatImageUrl(art.foto)} 
+                          onError={(e) => (e.currentTarget.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + art.nome)}
+                          className="w-10 h-10 rounded-full border border-[var(--border)] object-cover" 
+                        />
                         <div className="flex-1">
                           <h4 className="font-bold text-sm tracking-tight">{art.nome}</h4>
                           <div className="h-1 bg-[var(--surface2)] w-20 rounded-full overflow-hidden mt-1">
@@ -1020,7 +1073,11 @@ export default function App() {
                      { t: "Viralização", d: "Impulsione qualquer música", price: "$EC 20.000", icon: <Zap className="text-[var(--green)]" /> },
                      { t: "Empire Bet", d: "Aposte em posições na Billboard", price: "$EC 1.000", icon: <LayoutGrid className="text-[var(--purple)]" /> },
                    ].map((item, i) => (
-                     <div key={i} className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform">
+                     <div 
+                       key={i} 
+                       onClick={() => handleMarketClick(item.t, item.price)}
+                       className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform"
+                     >
                         <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                           {item.icon}
                         </div>
