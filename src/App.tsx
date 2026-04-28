@@ -55,6 +55,8 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
 // --- Main App ---
 
 export default function App() {
+  const [user, setUser] = useState<any>(null);
+  const [tgId, setTgId] = useState<string>("000000");
   const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'bater-ponto' | 'charts' | 'market'>('home');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
@@ -63,52 +65,47 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [actionCategory, setActionCategory] = useState<string>('comentarios');
 
-  // Fallback definitivo para o Telegram usando o objeto global padrão
-  const getTgUser = () => {
-    try {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg?.initDataUnsafe?.user) {
-        return tg.initDataUnsafe.user;
-      }
-
-      // Tenta via URL Search Params (muito comum em WebApp)
-      const urlParams = new URLSearchParams(window.location.search);
-      
-      // Tenta parsear tgWebAppData
-      const tgWebAppData = urlParams.get('tgWebAppData');
-      if (tgWebAppData) {
-        const data = new URLSearchParams(tgWebAppData);
-        const userJson = data.get('user');
-        if (userJson) return JSON.parse(userJson);
-      }
-
-      const urlId = urlParams.get('tgId') || urlParams.get('userId') || urlParams.get('id');
-      if (urlId) {
-        return { id: parseInt(urlId), first_name: "Usuário", last_name: "URL" };
-      }
-
-      // Preview/Dev fallback
-      if (window.location.hostname.includes('ais-') || window.location.hostname.includes('localhost')) {
-         return { id: 123456, first_name: "Visitante", last_name: "Preview" };
-      }
-    } catch (e) {
-      console.error("Erro na detecção de usuário:", e);
-    }
-    return null;
-  };
-
-  const user = getTgUser();
-  const tgId = user?.id?.toString() || "000000";
-
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      if (tg.headerColor) tg.setHeaderColor('#08010f');
-      if (tg.backgroundColor) tg.setBackgroundColor('#08010f');
-    }
-    setSdkReady(true);
+    
+    const initializeApp = () => {
+      try {
+        if (tg) {
+          tg.ready();
+          tg.expand();
+          if (tg.headerColor) tg.setHeaderColor('#08010f');
+          if (tg.backgroundColor) tg.setBackgroundColor('#08010f');
+          
+          if (tg.initDataUnsafe?.user) {
+            const u = tg.initDataUnsafe.user;
+            setUser(u);
+            setTgId(u.id.toString());
+            console.log("Telegram user detected:", u);
+          }
+        }
+
+        // Fallback or Test Mode
+        const params = new URLSearchParams(window.location.search);
+        const testId = params.get('tg_id') || params.get('userId') || params.get('id');
+        
+        if (testId) {
+          setTgId(testId);
+          setUser({ first_name: "Usuário", id: testId });
+          console.log("Test ID detected via URL:", testId);
+        } else if (!tg?.initDataUnsafe?.user) {
+          // Dev environment check
+          if (window.location.hostname.includes('localhost') || window.location.hostname.includes('ais-')) {
+            setTgId("123456");
+            setUser({ first_name: "Visitante", last_name: "Preview", id: "123456" });
+          }
+        }
+      } catch (e) {
+        console.error("Initialization error:", e);
+      }
+      setSdkReady(true);
+    };
+
+    initializeApp();
   }, []);
 
   useEffect(() => {
@@ -496,7 +493,7 @@ export default function App() {
                  <button 
                   onClick={() => {
                     setScreen('bater-ponto');
-                    safeHaptic(() => hapticFeedback.impactOccurred('medium'));
+                    safeHaptic();
                   }}
                   className="w-full py-4 rounded-2xl bg-gradient-to-r from-[var(--purple2)] to-[var(--purple)] text-white font-black text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-3"
                  >
@@ -531,7 +528,7 @@ export default function App() {
                       key={cat.id}
                       onClick={() => {
                         setActionCategory(cat.id);
-                        safeHaptic(() => hapticFeedback.impactOccurred('light'));
+                        safeHaptic();
                       }}
                       className={cn(
                         "glass-card p-4 flex items-center gap-4 cursor-pointer border-2 transition-all relative overflow-hidden",
