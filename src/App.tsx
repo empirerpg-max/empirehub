@@ -93,11 +93,9 @@ export default function App() {
           setUser({ first_name: "Usuário", id: testId });
           console.log("Test ID detected via URL:", testId);
         } else if (!tg?.initDataUnsafe?.user) {
-          // Dev environment check
-          if (window.location.hostname.includes('localhost') || window.location.hostname.includes('ais-')) {
-            setTgId("123456");
-            setUser({ first_name: "Visitante", last_name: "Preview", id: "123456" });
-          }
+          // Melhora o fallback fora do ambiente Telegram
+          setTgId("123456");
+          setUser({ first_name: "Visitante", last_name: "Preview", id: "123456" });
         }
       } catch (e) {
         console.error("Initialization error:", e);
