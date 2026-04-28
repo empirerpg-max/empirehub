@@ -70,13 +70,19 @@ export default function App() {
   const [sdkReady, setSdkReady] = useState(false);
   const [actionCategory, setActionCategory] = useState<string>('comentarios');
 
-  // Fallback para pegar o ID do telegram se o SDK falhar
+  // Fallback definitivo para o Telegram
   const getTgUser = () => {
     try {
-      if (lp?.initData?.user) return lp.initData.user;
       const webApp = (window as any).Telegram?.WebApp;
-      if (webApp?.initDataUnsafe?.user) return webApp.initDataUnsafe.user;
-    } catch (e) {}
+      if (webApp?.initDataUnsafe?.user) {
+        return webApp.initDataUnsafe.user;
+      }
+      if (lp?.initData?.user) {
+        return lp.initData.user;
+      }
+    } catch (e) {
+      console.error("Erro ao ler dados do Telegram:", e);
+    }
     return null;
   };
 
@@ -84,11 +90,22 @@ export default function App() {
   const tgId = user?.id || "000000";
 
   useEffect(() => {
-    // Pequeno delay para garantir que o SDK mock/real esteja estável
+    // Inicialização oficial do Telegram
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+        console.log("Telegram WebApp pronto.");
+      }
+    } catch (e) {
+      console.warn("Telegram SDK not available");
+    }
+
     const timer = setTimeout(() => {
       setSdkReady(true);
       loadArtists();
-    }, 500);
+    }, 300);
     return () => clearTimeout(timer);
   }, []);
 
