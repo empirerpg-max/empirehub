@@ -1,0 +1,6 @@
+{
+  "name": "Empire Hub",
+  "description": "Simulador musical de gerenciamento de artistas no Telegram com ranking, charts e economia eCoin.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

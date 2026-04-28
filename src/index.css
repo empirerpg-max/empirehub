@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-bebas: "Bebas Neue", cursive;
+}
+
+:root {
+  --bg: #08010f;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface2: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.09);
+  --gold: #f5c842;
+  --gold2: #e8a820;
+  --purple: #bc13fe;
+  --purple2: #8a00d4;
+  --neon: #00ffd4;
+  --red: #ff3b5c;
+  --green: #00e87a;
+  --text: #f0e8ff;
+  --muted: rgba(240, 232, 255, 0.42);
+  
+  /* Telegram Defaults - Overridden by SDK if available */
+  --tg-theme-bg-color: #08010f;
+  --tg-theme-text-color: #f0e8ff;
+  --tg-theme-hint-color: rgba(240, 232, 255, 0.42);
+  --tg-theme-link-color: #bc13fe;
+  --tg-theme-button-color: #bc13fe;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: rgba(255, 255, 255, 0.04);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  user-select: none;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.ambient {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.amb1 {
+  width: 350px;
+  height: 350px;
+  top: -100px;
+  left: -80px;
+  background: radial-gradient(circle, rgba(188, 19, 254, 0.18) 0%, transparent 70%);
+}
+
+.amb2 {
+  width: 280px;
+  height: 280px;
+  bottom: 80px;
+  right: -60px;
+  background: radial-gradient(circle, rgba(245, 200, 66, 0.12) 0%, transparent 70%);
+}
+
+.glass-card {
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.bebas {
+  font-family: 'Bebas Neue', cursive;
+}
+
+/* Custom Scrollbar hide */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
