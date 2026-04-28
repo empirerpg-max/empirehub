@@ -16,7 +16,8 @@ export const apiService = {
     try {
       const response = await fetch(`${SCRIPT_URL}?acao=get_artistas_by_tg&tg_id=${tgId}`);
       if (!response.ok) throw new Error("Network response was not ok");
-      return await response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error("Error fetching artists:", error);
       return [];
