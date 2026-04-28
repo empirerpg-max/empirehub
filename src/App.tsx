@@ -66,10 +66,9 @@ export default function App() {
   const [actionCategory, setActionCategory] = useState<string>('comentarios');
 
   useEffect(() => {
-    const tg = (window as any).Telegram?.WebApp;
-    
     const initializeApp = () => {
       try {
+        const tg = (window as any).Telegram?.WebApp;
         if (tg) {
           tg.ready();
           tg.expand();
@@ -80,7 +79,6 @@ export default function App() {
             const u = tg.initDataUnsafe.user;
             setUser(u);
             setTgId(u.id.toString());
-            console.log("Telegram user detected:", u);
           }
         }
 
@@ -91,14 +89,14 @@ export default function App() {
         if (testId) {
           setTgId(testId);
           setUser({ first_name: "Usuário", id: testId });
-          console.log("Test ID detected via URL:", testId);
         } else if (!tg?.initDataUnsafe?.user) {
-          // Melhora o fallback fora do ambiente Telegram
           setTgId("123456");
           setUser({ first_name: "Visitante", last_name: "Preview", id: "123456" });
         }
       } catch (e) {
         console.error("Initialization error:", e);
+        setTgId("123456");
+        setUser({ first_name: "Error User", id: "123456" });
       }
       setSdkReady(true);
     };
