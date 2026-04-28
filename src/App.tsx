@@ -56,18 +56,40 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
 // --- Main App ---
 
 export default function App() {
-  const lp = useLaunchParams();
+  let lp: any = null;
+  try {
+    lp = useLaunchParams();
+  } catch (e) {
+    console.warn("Launch params not found, using fallback or mock");
+  }
+
   const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'bater-ponto' | 'charts' | 'market'>('home');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sdkReady, setSdkReady] = useState(false);
   const [actionCategory, setActionCategory] = useState<string>('comentarios');
 
-  const user = lp.initData?.user;
+  // Fallback para pegar o ID do telegram se o SDK falhar
+  const getTgUser = () => {
+    try {
+      if (lp?.initData?.user) return lp.initData.user;
+      const webApp = (window as any).Telegram?.WebApp;
+      if (webApp?.initDataUnsafe?.user) return webApp.initDataUnsafe.user;
+    } catch (e) {}
+    return null;
+  };
+
+  const user = getTgUser();
   const tgId = user?.id || "000000";
 
   useEffect(() => {
-    loadArtists();
+    // Pequeno delay para garantir que o SDK mock/real esteja estável
+    const timer = setTimeout(() => {
+      setSdkReady(true);
+      loadArtists();
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -158,6 +180,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#08010f] text-[#f0e8ff] flex flex-col overflow-hidden relative">
+      {!sdkReady && (
+        <div className="fixed inset-0 z-[100] bg-[#08010f] flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-[var(--purple)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="bebas text-xl tracking-widest animate-pulse">EMPIRE HUB</p>
+            </div>
+        </div>
+      )}
       {/* Background Decor */}
       <div className="ambient amb1"></div>
       <div className="ambient amb2"></div>
@@ -201,6 +231,7 @@ export default function App() {
               <div className="text-center py-4">
                 <h1 className="bebas text-5xl tracking-widest mb-1 italic text-white">EMPIRE HUB</h1>
                 <p className="text-[10px] opacity-40 uppercase tracking-[0.4em]">Entertainment Professional Network</p>
+                <p className="text-[8px] opacity-20 mt-1 uppercase font-bold">ID: {tgId}</p>
               </div>
 
               {selectedArtist && (
