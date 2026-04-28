@@ -15,14 +15,15 @@ export interface Artist {
 export const apiService = {
   getArtistsByTg: async (tgId: string | number): Promise<Artist[]> => {
     try {
-      const response = await fetch(`${SCRIPT_URL}?acao=get_artistas_by_tg&tg_id=${tgId}`);
-      if (!response.ok) throw new Error("Network response was not ok");
+      // Sincronizado com o Script: acao=meus_artistas e telegram_id
+      const response = await fetch(`${SCRIPT_URL}?acao=meus_artistas&telegram_id=${tgId}`);
+      if (!response.ok) throw new Error("Erro na rede");
       const data = await response.json();
       const artists = Array.isArray(data) ? data : [];
-      // Map to ensure both versions exist
+      // Mapeia para garantir que fortunaTotal e fortuna_total existam (compatibilidade)
       return artists.map((a: any) => ({
         ...a,
-        fortunaTotal: a.fortunaTotal || a.fortuna_total || 0,
+        fortunaTotal: a.fortuna_total || a.fortunaTotal || 0,
         fortuna_total: a.fortuna_total || a.fortunaTotal || 0,
         fadiga: a.fadiga || 0,
         prestigio: a.prestigio || 0,

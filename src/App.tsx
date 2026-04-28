@@ -74,27 +74,36 @@ export default function App() {
   const getTgUser = () => {
     try {
       const webApp = (window as any).Telegram?.WebApp;
-      if (webApp?.initDataUnsafe?.user) {
-        console.log("Telegram User detectado:", webApp.initDataUnsafe.user);
-        return webApp.initDataUnsafe.user;
-      }
-      
-      // Tenta o LaunchParams do SDK moderno
-      if (lp?.initData?.user) {
-        return lp.initData.user;
+      let userData = webApp?.initDataUnsafe?.user;
+
+      if (!userData && lp?.initData?.user) {
+        userData = lp.initData.user;
       }
 
-      // Tenta via URL Search Params (fallback manual)
+      if (!userData) {
+        // Tenta parsear do hash/query manualmente (caso o SDK falhe em carregar a tempo)
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+        
+        const rawInitData = searchParams.get('tgWebAppData') || hashParams.get('tgWebAppData');
+        if (rawInitData) {
+          const initDataParams = new URLSearchParams(rawInitData);
+          const userJson = initDataParams.get('user');
+          if (userJson) userData = JSON.parse(userJson);
+        }
+      }
+
+      if (userData) return userData;
+
+      // Fallback via URL simples
       const urlParams = new URLSearchParams(window.location.search);
       const urlId = urlParams.get('tgId') || urlParams.get('userId') || urlParams.get('id');
       if (urlId) {
-        console.log("ID detectado via URL:", urlId);
-        return { id: parseInt(urlId), first_name: "Usuario", last_name: "URL" };
+        return { id: parseInt(urlId), first_name: "Usuário", last_name: "URL" };
       }
 
-      // Se estiver em modo desenvolvimento (preview), simula um usuário para não ficar vazio
-      if (window.location.hostname.includes('ais-dev') || window.location.hostname.includes('localhost') || window.location.hostname.includes('github.io')) {
-         console.warn("Ambiente externo detectado. Simulando ID para testes.");
+      // Preview/Dev
+      if (window.location.hostname.includes('ais-') || window.location.hostname.includes('localhost') || window.location.hostname.includes('github.io')) {
          return { id: 123456, first_name: "Visitante", last_name: "Preview" };
       }
     } catch (e) {
@@ -113,11 +122,8 @@ export default function App() {
       if (tg) {
         tg.ready();
         tg.expand();
-        console.log("Telegram WebApp pronto.");
       }
-    } catch (e) {
-      console.warn("Telegram SDK not available");
-    }
+    } catch (e) {}
 
     setSdkReady(true);
   }, []);
@@ -128,22 +134,27 @@ export default function App() {
     }
   }, [tgId, sdkReady]);
 
-  useEffect(() => {
-    if (screen === 'artists' || screen === 'charts') {
-      loadArtists();
-    }
-  }, [screen]);
-
   const loadArtists = async () => {
     setLoading(true);
-    const data = await apiService.getArtistsByTg(tgId);
-    setArtists(data);
-    // Se um artista já estiver selecionado, atualiza ele na memória
-    if (selectedArtist) {
-      const updated = data.find(a => a.nome === selectedArtist.nome);
-      if (updated) setSelectedArtist(updated);
+    try {
+      const data = await apiService.getArtistsByTg(tgId);
+      setArtists(data);
+      
+      // Auto-seleção amigável: se o usuário só tiver UM artista, já abre o dashboard dele
+      if (data.length === 1 && !selectedArtist) {
+        setSelectedArtist(data[0]);
+        setScreen('dashboard');
+      }
+
+      if (selectedArtist) {
+        const updated = data.find(a => a.nome === selectedArtist.nome);
+        if (updated) setSelectedArtist(updated);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleActionSubmit = async () => {
