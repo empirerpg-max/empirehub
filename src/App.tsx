@@ -221,6 +221,19 @@ export default function App() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val).replace('R$', '$EC');
   };
 
+  const formatImageUrl = (url: string | undefined | null) => {
+    if (!url) return '';
+    
+    // Converte links do Google Drive para links Diretos
+    if (url.includes('drive.google.com')) {
+      const match = url.match(/\/d\/([^\/]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    }
+    return url;
+  };
+
   return (
     <div className="min-h-screen bg-[#08010f] text-[#f0e8ff] flex flex-col overflow-hidden relative">
       {!sdkReady && (
@@ -305,7 +318,13 @@ export default function App() {
                   onClick={() => setScreen('dashboard')}
                   className="glass-card p-4 border-l-4 border-l-[var(--purple)] flex items-center gap-4 cursor-pointer active:scale-95 transition-transform"
                 >
-                  <img src={selectedArtist.foto} className="w-12 h-12 rounded-full border border-[var(--purple)] object-cover" />
+                  <div className="w-12 h-12 rounded-full overflow-hidden border border-[var(--purple)] bg-white/5">
+                    <img 
+                      src={formatImageUrl(selectedArtist.foto)} 
+                      onError={(e) => (e.currentTarget.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Empire')}
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
                   <div className="flex-1">
                     <p className="text-[8px] uppercase font-bold opacity-40 tracking-widest">Artista Ativo</p>
                     <h4 className="font-bold text-sm tracking-tight">{selectedArtist.nome}</h4>
@@ -471,11 +490,14 @@ export default function App() {
                       onClick={() => handleArtistClick(artist)}
                       className="glass-card p-4 flex items-center gap-4 cursor-pointer"
                     >
-                      <img 
-                        src={artist.foto || 'https://via.placeholder.com/150'} 
-                        alt={artist.nome} 
-                        className="w-14 h-14 rounded-full object-cover border-2 border-[var(--purple)]"
-                      />
+                      <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[var(--purple)] bg-white/5">
+                        <img 
+                          src={formatImageUrl(artist.foto)} 
+                          alt={artist.nome} 
+                          onError={(e) => (e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${artist.nome}`)}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                       <div className="flex-1">
                         <h3 className="font-bold">{artist.nome}</h3>
                         <p className="text-xs text-[var(--gold)] font-bold">{formatCurrency(artist.saldo)}</p>
@@ -498,11 +520,14 @@ export default function App() {
             >
               <div className="text-center space-y-4">
                 <div className="relative inline-block">
-                   <img 
-                    src={selectedArtist.foto} 
-                    alt={selectedArtist.nome} 
-                    className="w-32 h-32 rounded-full object-cover border-4 border-[#08010f] relative z-10 mx-auto"
-                   />
+                   <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#08010f] relative z-10 mx-auto bg-white/5">
+                     <img 
+                      src={formatImageUrl(selectedArtist.foto)} 
+                      alt={selectedArtist.nome} 
+                      onError={(e) => (e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedArtist.nome}`)}
+                      className="w-full h-full object-cover"
+                     />
+                   </div>
                    <div className="absolute inset-[-4px] rounded-full bg-gradient-to-br from-[var(--purple)] to-[var(--gold)] animate-spin-slow opacity-50 shadow-[0_0_20px_rgba(188,19,254,0.3)]"></div>
                 </div>
                 <div>
