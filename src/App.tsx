@@ -57,13 +57,27 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [tgId, setTgId] = useState<string>("000000");
-  const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'bater-ponto' | 'charts' | 'market'>('home');
+  const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'bater-ponto' | 'charts' | 'market' | 'feed' | 'labels' | 'duel' | 'hub' | 'finished-projects'>('home');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionCategory, setActionCategory] = useState<string>('comentarios');
+
+  // Labels Data
+  const labels = [
+    { name: "King & Queen", totalAcquired: 12500000, artists: ["Empire Star", "Queen B"] },
+    { name: "Crown", totalAcquired: 8400000, artists: ["Prince of Pop"] },
+    { name: "Independent", totalAcquired: 2100000, artists: ["Indie Soul"] }
+  ];
+
+  // Feed Data (Mock)
+  const feedItems = [
+    { user: "João", action: "contratou uma Tour Nacional", artist: "Empire Star", time: "2m" },
+    { user: "Maria", action: "comprou um Apartamento em NY", artist: "Prince of Pop", time: "5m" },
+    { user: "Pedro", action: "viralizou uma música", artist: "Indie Soul", time: "12m" },
+  ];
 
   useEffect(() => {
     const initializeApp = () => {
@@ -197,9 +211,8 @@ export default function App() {
 
   const navigateBack = () => {
     if (screen === 'dashboard') setScreen('artists');
-    else if (screen === 'mgmt') setScreen('dashboard');
-    else if (screen === 'bater-ponto') setScreen('dashboard');
-    else if (screen === 'charts' || screen === 'market') setScreen('home');
+    else if (screen === 'mgmt' || screen === 'hub' || screen === 'finished-projects' || screen === 'bater-ponto') setScreen('dashboard');
+    else if (['feed', 'labels', 'duel', 'charts', 'market', 'artists', 'tutorial'].includes(screen)) setScreen('home');
     else setScreen('home');
     safeHaptic();
   };
@@ -303,44 +316,103 @@ export default function App() {
               )}
 
               <div className="grid grid-cols-1 gap-3">
+                {/* O que os artistas estão fazendo */}
+                <div 
+                  onClick={() => setScreen('feed')}
+                  className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--purple)]/10 border border-[var(--purple)]/20 flex items-center justify-center text-[var(--purple)] group-hover:bg-[var(--purple)] group-hover:text-white transition-colors">
+                    <Globe size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">O que os artistas estão fazendo</h3>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">Atividade em Tempo Real</p>
+                  </div>
+                </div>
+
+                {/* Tutorial */}
+                <div 
+                  onClick={() => setScreen('tutorial')}
+                  className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--neon)]/10 border border-[var(--neon)]/20 flex items-center justify-center text-[var(--neon)] group-hover:bg-[var(--neon)] group-hover:text-black transition-colors">
+                    <Info size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">Tutorial</h3>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">aprenda a usar</p>
+                  </div>
+                </div>
+
+                {/* Seu Artista (Meus Artistas) */}
                 <div 
                   onClick={() => setScreen('artists')}
                   className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[var(--purple)]/10 border border-[var(--purple)]/20 flex items-center justify-center text-[var(--purple)] group-hover:bg-[var(--purple)] group-hover:text-white transition-colors">
-                    <User size={24} />
+                  <div className="w-12 h-12 rounded-xl bg-[var(--gold)]/10 border border-[var(--gold)]/20 flex items-center justify-center text-[var(--gold)] group-hover:bg-[var(--gold)] group-hover:text-black transition-colors">
+                    <Music size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm uppercase tracking-tight">Meus Artistas</h3>
-                    <p className="text-[10px] opacity-40 uppercase font-medium">Gestão e Portfólio</p>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">Seu Artista</h3>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">Gestão, Projetos e Hub</p>
                   </div>
                 </div>
 
-                  <div 
-                    onClick={() => setScreen('charts')}
-                    className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-[var(--neon)]/10 border border-[var(--neon)]/20 flex items-center justify-center text-[var(--neon)] group-hover:bg-[var(--neon)] group-hover:text-black transition-colors">
-                      <Globe size={24} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm uppercase tracking-tight">Ranking Global</h3>
-                      <p className="text-[10px] opacity-40 uppercase font-medium">Charts & Prestige</p>
-                    </div>
+                {/* Gravadoras */}
+                <div 
+                  onClick={() => setScreen('labels')}
+                  className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--purple2)]/10 border border-[var(--purple2)]/20 flex items-center justify-center text-[var(--purple2)] group-hover:bg-[var(--purple2)] group-hover:text-white transition-colors">
+                    <LayoutGrid size={24} />
                   </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">Gravadoras</h3>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">Selo e Contratos</p>
+                  </div>
+                </div>
 
-                  <div 
-                    onClick={() => setScreen('market')}
-                    className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-[var(--green)]/10 border border-[var(--green)]/20 flex items-center justify-center text-[var(--green)] group-hover:bg-[var(--green)] group-hover:text-black transition-colors">
-                      <Zap size={24} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm uppercase tracking-tight">Empire Market</h3>
-                      <p className="text-[10px] opacity-40 uppercase font-medium">Investimentos</p>
-                    </div>
+                {/* Duelo */}
+                <div 
+                  onClick={() => setScreen('duel')}
+                  className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--red)]/10 border border-[var(--red)]/20 flex items-center justify-center text-[var(--red)] group-hover:bg-[var(--red)] group-hover:text-white transition-colors">
+                    <Trophy size={24} />
                   </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">Duelo</h3>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">Minigame de Charts</p>
+                  </div>
+                </div>
+
+                {/* Ranking Global */}
+                <div 
+                  onClick={() => setScreen('charts')}
+                  className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 group-hover:bg-white group-hover:text-black transition-colors">
+                    <Globe size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">Ranking Global</h3>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">Charts & Prestige</p>
+                  </div>
+                </div>
+
+                {/* Empire Market */}
+                <div 
+                  onClick={() => setScreen('market')}
+                  className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--green)]/10 border border-[var(--green)]/20 flex items-center justify-center text-[var(--green)] group-hover:bg-[var(--green)] group-hover:text-black transition-colors">
+                    <Zap size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">Empire Market</h3>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">Investimentos Oficiais</p>
+                  </div>
+                </div>
               </div>
 
               <div className="glass-card p-5 border-dashed border-2 border-[var(--border)] opacity-60">
@@ -471,17 +543,26 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="flex flex-col items-center gap-2 p-4 glass-card cursor-pointer border-b-2 border-b-[var(--purple)]" onClick={() => setScreen('mgmt')}>
-                   <Rocket className="text-[var(--purple)]" />
-                   <span className="text-[10px] font-bold uppercase">Gestão</span>
+                <div 
+                  className={cn("flex flex-col items-center gap-2 p-4 glass-card cursor-pointer transition-all", screen === 'hub' ? "border-b-2 border-b-[var(--purple)]" : "")} 
+                  onClick={() => setScreen('hub')}
+                >
+                   <Rocket className={cn(screen === 'hub' ? "text-[var(--purple)]" : "opacity-40")} />
+                   <span className="text-[9px] font-bold uppercase text-center leading-tight">Empire Hub</span>
                 </div>
-                <div className="flex flex-col items-center gap-2 p-4 glass-card cursor-pointer" onClick={() => setScreen('market')}>
-                   <Store className="text-[var(--gold)]" />
-                   <span className="text-[10px] font-bold uppercase">Mercado</span>
+                <div 
+                  className={cn("flex flex-col items-center gap-2 p-4 glass-card cursor-pointer transition-all", screen === 'mgmt' ? "border-b-2 border-b-[var(--purple)]" : "")} 
+                  onClick={() => setScreen('mgmt')}
+                >
+                   <LayoutGrid className={cn(screen === 'mgmt' ? "text-[var(--purple)]" : "opacity-40")} />
+                   <span className="text-[9px] font-bold uppercase text-center leading-tight">Gestão Projetos</span>
                 </div>
-                <div className="flex flex-col items-center gap-2 p-4 glass-card cursor-pointer" onClick={() => setScreen('tutorial')}>
-                   <Info className="text-[var(--neon)]" />
-                   <span className="text-[10px] font-bold uppercase">Ajuda</span>
+                <div 
+                  className={cn("flex flex-col items-center gap-2 p-4 glass-card cursor-pointer transition-all", screen === 'finished-projects' ? "border-b-2 border-b-[var(--purple)]" : "")} 
+                  onClick={() => setScreen('finished-projects')}
+                >
+                   <Trophy className={cn(screen === 'finished-projects' ? "text-[var(--purple)]" : "opacity-40")} />
+                   <span className="text-[9px] font-bold uppercase text-center leading-tight">Projetos Finais</span>
                 </div>
               </div>
 
@@ -651,6 +732,139 @@ export default function App() {
              </motion.div>
           )}
 
+          {screen === 'feed' && (
+             <motion.div
+               key="feed"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="space-y-6"
+             >
+                <div className="text-center">
+                  <h2 className="bebas text-3xl tracking-widest text-center">FEED EM REAL TIME</h2>
+                  <p className="text-[10px] opacity-40 uppercase tracking-widest">O que os artistas estão fazendo</p>
+                </div>
+
+                <div className="space-y-3">
+                  {feedItems.map((item, idx) => (
+                    <div key={idx} className="glass-card p-4 border-l-2 border-l-[var(--purple)]">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-[10px] font-black text-white">{item.user}</span>
+                        <span className="text-[8px] opacity-30 font-bold uppercase">{item.time} atrás</span>
+                      </div>
+                      <p className="text-xs opacity-70">
+                        {item.action} para <span className="text-[var(--gold)] font-bold">{item.artist}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="text-center py-10 opacity-30">
+                  <RefreshCw size={24} className="mx-auto mb-2 animate-spin-slow" />
+                  <p className="text-[10px] uppercase font-bold tracking-widest">Atualizando Feed...</p>
+                </div>
+             </motion.div>
+          )}
+
+          {screen === 'labels' && (
+             <motion.div
+               key="labels"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="space-y-6"
+             >
+                <div className="text-center">
+                  <h2 className="bebas text-3xl tracking-widest text-center">GRAVADORAS</h2>
+                  <p className="text-[10px] opacity-40 uppercase tracking-widest">Market Share & Artistas</p>
+                </div>
+
+                <div className="space-y-4">
+                  {labels.map((label, idx) => (
+                    <div key={idx} className="glass-card p-5 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Music size={40} />
+                      </div>
+                      <h3 className="bebas text-2xl tracking-widest text-white mb-1">{label.name}</h3>
+                      <p className="text-[10px] opacity-40 uppercase font-bold tracking-widest mb-4">Total Adquirido: <span className="text-[var(--gold)]">{formatCurrency(label.totalAcquired)}</span></p>
+                      
+                      <div className="pt-3 border-t border-white/5">
+                        <p className="text-[9px] opacity-30 uppercase font-black tracking-widest mb-2">Artistas no Selo</p>
+                        <div className="flex flex-wrap gap-2">
+                          {label.artists.map((art, aIdx) => (
+                            <span key={aIdx} className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[9px] font-bold text-white/50">{art}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+             </motion.div>
+          )}
+
+          {screen === 'duel' && (
+             <motion.div
+               key="duel"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="space-y-6"
+             >
+                <div className="text-center">
+                  <h2 className="bebas text-3xl tracking-widest text-center">DUELO DE CHARTS</h2>
+                  <p className="text-[10px] opacity-40 uppercase tracking-widest">Mini-game de combate</p>
+                </div>
+
+                <div className="glass-card p-6 flex flex-col gap-8 relative overflow-hidden">
+                   {/* Background logic nodes */}
+                   <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] pointer-events-none"></div>
+                   
+                   <div className="flex items-center justify-between relative z-10">
+                      <div className="text-center space-y-2 flex-1">
+                        <div className="w-16 h-16 rounded-full bg-[var(--purple)]/20 border-2 border-[var(--purple)] mx-auto flex items-center justify-center relative">
+                          <User size={30} className="text-[var(--purple)]" />
+                        </div>
+                        <h4 className="bebas text-lg">MEU ARTISTA</h4>
+                        <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                           <div className="h-full bg-[var(--green)] w-[85%]"></div>
+                        </div>
+                      </div>
+
+                      <div className="bebas text-4xl text-red-500 animate-pulse italic">VS</div>
+
+                      <div className="text-center space-y-2 flex-1">
+                        <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 mx-auto flex items-center justify-center">
+                          <User size={30} className="text-red-500" />
+                        </div>
+                        <h4 className="bebas text-lg">DESAFIANTE</h4>
+                        <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                           <div className="h-full bg-red-500 w-[60%]"></div>
+                        </div>
+                      </div>
+                   </div>
+
+                   <div className="bg-black/40 rounded-xl p-4 border border-white/5 relative z-10">
+                      <p className="text-[10px] opacity-50 uppercase font-bold text-center mb-2 tracking-widest">Log de Combate</p>
+                      <div className="space-y-1 text-[10px] font-mono leading-tight">
+                         <p className="text-[var(--green)]">&gt;&gt; Meu Artista usou "Billboard Hot 100"!</p>
+                         <p className="text-red-400">&gt;&gt; Desafiante recebeu 250 de dano.</p>
+                         <p className="text-white/40">&gt;&gt; Desafiante está preparando "Spotify Global"...</p>
+                      </div>
+                   </div>
+
+                   <button className="w-full py-4 rounded-xl bg-red-600 text-white bebas text-2xl tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 transition-transform uppercase">
+                      Lutar Agora
+                   </button>
+                </div>
+
+                <div className="text-center opacity-30 px-6">
+                   <p className="text-[9px] uppercase font-bold tracking-widest leading-relaxed">
+                     O duelo é baseado no desempenho orgânico e investimentos da semana. O vencedor ganha prestígio extra.
+                   </p>
+                </div>
+             </motion.div>
+          )}
+
           {screen === 'charts' && (
              <motion.div
                key="charts"
@@ -702,39 +916,120 @@ export default function App() {
              </motion.div>
           )}
 
+          {screen === 'hub' && (
+             <motion.div
+                key="hub"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-6"
+             >
+                <div className="text-center">
+                  <h2 className="bebas text-3xl tracking-widest text-center">EMPIRE HUB</h2>
+                  <p className="text-[10px] opacity-40 uppercase tracking-widest">Contratações e Expansão</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <div 
+                    onClick={() => handleStartProject('tour')}
+                    className="glass-card p-5 border-l-4 border-l-[var(--gold)] flex items-center gap-5 cursor-pointer active:scale-95 transition-transform"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
+                      <Music size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="bebas text-xl tracking-widest">CONTRATAR TOUR</h3>
+                      <p className="text-[10px] opacity-40 uppercase font-bold tracking-tight">Criação de Roteiro e Datas</p>
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={() => handleStartProject('cinema')}
+                    className="glass-card p-5 border-l-4 border-l-[var(--neon)] flex items-center gap-5 cursor-pointer active:scale-95 transition-transform"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[var(--neon)]/10 flex items-center justify-center text-[var(--neon)]">
+                      <Film size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="bebas text-xl tracking-widest">CINEMA & TV</h3>
+                      <p className="text-[10px] opacity-40 uppercase font-bold tracking-tight">Filmes, Séries e Reality Shows</p>
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={() => setScreen('market')}
+                    className="glass-card p-5 border-l-4 border-l-[var(--green)] flex items-center gap-5 cursor-pointer active:scale-95 transition-transform"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[var(--green)]/10 flex items-center justify-center text-[var(--green)]">
+                      <Store size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="bebas text-xl tracking-widest">EMPIRE MARKET</h3>
+                      <p className="text-[10px] opacity-40 uppercase font-bold tracking-tight">Menu de Compras e Investimentos</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass-card p-4 border-dashed border-2 border-[var(--border)] opacity-30 mt-4">
+                  <p className="text-[10px] italic text-center leading-relaxed">
+                    "Preenchendo as informações, os dados são processados para gerar status, crítica e arrecadação do projeto."
+                  </p>
+                </div>
+             </motion.div>
+          )}
+
           {screen === 'market' && (
              <motion.div key="market" className="space-y-6">
                  <div className="text-center">
                     <h2 className="bebas text-3xl tracking-widest text-center">EMPIRE MARKET</h2>
-                    <p className="text-[10px] opacity-40 uppercase tracking-widest">Investimentos e Expansão</p>
+                    <p className="text-[10px] opacity-40 uppercase tracking-widest">Shopping de Investimentos</p>
                  </div>
                  
-                 <div className="pb-10">
+                 <div className="space-y-3 pb-10">
                    {[
-                     { t: "Estúdio de Gravação", d: "Aumenta a qualidade dos registros diários em 15%", price: "50,000", icon: <Mic2 className="text-[var(--gold)]" /> },
-                     { t: "Assessoria de Imprensa", d: "Reduz a perda de prestígio semanal", price: "75,000", icon: <Info className="text-[var(--neon)]" /> },
-                     { t: "Jato Particular", d: "Reduz a fadiga de tour em 20%", price: "500,000", icon: <Zap className="text-[var(--green)]" /> }
+                     { t: "Mural de Composições", d: "Compre ou venda letras de músicas", price: "$EC 5.000", icon: <Mic2 className="text-[var(--gold)]" /> },
+                     { t: "Filantropia", d: "Aumente sua reputação e prestígio", price: "$EC 2.500", icon: <Sparkles className="text-pink-400" /> },
+                     { t: "Imobiliária", d: "Compra de casa ou apartamento", price: "$EC 150.000+", icon: <Store className="text-[var(--neon)]" /> },
+                     { t: "Rescisão de Contrato", d: "Multa e negociação com gravadora", price: "Variável", icon: <FileText size={20} className="text-[var(--red)]" /> },
+                     { t: "Leilão Empire", d: "Itens raros e exclusivos", price: "$EC 10.000", icon: <Trophy className="text-[var(--gold)]" /> },
+                     { t: "Viralização", d: "Impulsione qualquer música", price: "$EC 20.000", icon: <Zap className="text-[var(--green)]" /> },
+                     { t: "Empire Bet", d: "Aposte em posições na Billboard", price: "$EC 1.000", icon: <LayoutGrid className="text-[var(--purple)]" /> },
                    ].map((item, i) => (
-                     <div key={i} className="glass-card p-5 mb-3 flex items-center gap-5 opacity-30 grayscale relative overflow-hidden">
-                        <div className="w-12 h-12 rounded-2xl bg-[var(--surface2)] flex items-center justify-center">
+                     <div key={i} className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform">
+                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                           {item.icon}
                         </div>
                         <div className="flex-1">
                           <h4 className="font-bold text-sm">{item.t}</h4>
-                          <p className="text-[10px] opacity-60 leading-tight">{item.d}</p>
+                          <p className="text-[10px] opacity-40 font-medium uppercase tracking-tighter leading-tight">{item.d}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] font-black text-[var(--gold)]">EC {item.price}</p>
-                          <span className="text-[8px] bg-white/10 px-2 py-0.5 rounded text-white font-bold uppercase">Breve</span>
+                          <p className="text-[10px] font-black text-[var(--gold)]">{item.price}</p>
+                          <span className="text-[8px] opacity-30 font-bold uppercase">Acessar</span>
                         </div>
                      </div>
                    ))}
                  </div>
+             </motion.div>
+          )}
 
-                 <div className="glass-card p-10 text-center border-dashed border-2 border-[var(--border)] opacity-20">
-                    <Trophy size={40} className="mx-auto mb-4" />
-                    <p className="text-xs uppercase font-black">Módulo de Expansão em Desenvolvimento</p>
-                 </div>
+          {screen === 'finished-projects' && (
+             <motion.div
+               key="finished-projects"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="space-y-6"
+             >
+                <div className="text-center">
+                  <h2 className="bebas text-3xl tracking-widest text-center">PROJETOS FINALIZADOS</h2>
+                  <p className="text-[10px] opacity-40 uppercase tracking-widest">Histórico e Legado</p>
+                </div>
+
+                <div className="glass-card p-10 text-center border-dashed border-2 opacity-30">
+                   <p className="text-xs font-bold uppercase tracking-widest">Nenhum projeto concluído</p>
+                   <p className="text-[10px] mt-2 leading-relaxed">Artistas sem histórico de tours ou filmes finalizados ainda.</p>
+                </div>
              </motion.div>
           )}
 
