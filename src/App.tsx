@@ -75,10 +75,19 @@ export default function App() {
     try {
       const webApp = (window as any).Telegram?.WebApp;
       if (webApp?.initDataUnsafe?.user) {
+        console.log("Telegram User detectado:", webApp.initDataUnsafe.user);
         return webApp.initDataUnsafe.user;
       }
+      
+      // Tenta o LaunchParams do SDK moderno
       if (lp?.initData?.user) {
         return lp.initData.user;
+      }
+
+      // Se estiver em modo desenvolvimento (preview), simula um usuário para não ficar vazio
+      if (window.location.hostname.includes('ais-dev') || window.location.hostname.includes('localhost') || window.location.hostname.includes('github.io')) {
+         console.warn("Ambiente externo detectado. Simulando ID para testes.");
+         return { id: 123456, first_name: "Visitante", last_name: "Preview" };
       }
     } catch (e) {
       console.error("Erro ao ler dados do Telegram:", e);
@@ -87,7 +96,7 @@ export default function App() {
   };
 
   const user = getTgUser();
-  const tgId = user?.id || "000000";
+  const tgId = user?.id?.toString() || "000000";
 
   useEffect(() => {
     // Inicialização oficial do Telegram
@@ -102,11 +111,8 @@ export default function App() {
       console.warn("Telegram SDK not available");
     }
 
-    const timer = setTimeout(() => {
-      setSdkReady(true);
-      loadArtists();
-    }, 300);
-    return () => clearTimeout(timer);
+    setSdkReady(true);
+    loadArtists();
   }, []);
 
   useEffect(() => {
