@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useLaunchParams, useSignal } from '@telegram-apps/sdk-react';
-import { hapticFeedback, miniApp } from '@telegram-apps/sdk';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, Wallet, Sparkles, MessageSquare, Bell, 
   Settings, Rocket, Zap, ChevronLeft, Globe, 
-  Music, Film, Trophy, LayoutGrid, Info, Mic2, Store
+  Music, Film, Trophy, LayoutGrid, Info, Mic2, Store,
+  AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from './lib/utils';
@@ -56,58 +55,44 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
 // --- Main App ---
 
 export default function App() {
-  let lp: any = null;
-  try {
-    lp = useLaunchParams();
-  } catch (e) {
-    console.warn("Launch params not found, using fallback or mock");
-  }
-
   const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'bater-ponto' | 'charts' | 'market'>('home');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [actionCategory, setActionCategory] = useState<string>('comentarios');
 
-  // Fallback definitivo para o Telegram
+  // Fallback definitivo para o Telegram usando o objeto global padrão
   const getTgUser = () => {
     try {
-      const webApp = (window as any).Telegram?.WebApp;
-      let userData = webApp?.initDataUnsafe?.user;
-
-      if (!userData && lp?.initData?.user) {
-        userData = lp.initData.user;
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.initDataUnsafe?.user) {
+        return tg.initDataUnsafe.user;
       }
 
-      if (!userData) {
-        // Tenta parsear do hash/query manualmente (caso o SDK falhe em carregar a tempo)
-        const searchParams = new URLSearchParams(window.location.search);
-        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
-        
-        const rawInitData = searchParams.get('tgWebAppData') || hashParams.get('tgWebAppData');
-        if (rawInitData) {
-          const initDataParams = new URLSearchParams(rawInitData);
-          const userJson = initDataParams.get('user');
-          if (userJson) userData = JSON.parse(userJson);
-        }
-      }
-
-      if (userData) return userData;
-
-      // Fallback via URL simples
+      // Tenta via URL Search Params (muito comum em WebApp)
       const urlParams = new URLSearchParams(window.location.search);
+      
+      // Tenta parsear tgWebAppData
+      const tgWebAppData = urlParams.get('tgWebAppData');
+      if (tgWebAppData) {
+        const data = new URLSearchParams(tgWebAppData);
+        const userJson = data.get('user');
+        if (userJson) return JSON.parse(userJson);
+      }
+
       const urlId = urlParams.get('tgId') || urlParams.get('userId') || urlParams.get('id');
       if (urlId) {
         return { id: parseInt(urlId), first_name: "Usuário", last_name: "URL" };
       }
 
-      // Preview/Dev
-      if (window.location.hostname.includes('ais-') || window.location.hostname.includes('localhost') || window.location.hostname.includes('github.io')) {
+      // Preview/Dev fallback
+      if (window.location.hostname.includes('ais-') || window.location.hostname.includes('localhost')) {
          return { id: 123456, first_name: "Visitante", last_name: "Preview" };
       }
     } catch (e) {
-      console.error("Erro ao ler dados do Telegram:", e);
+      console.error("Erro na detecção de usuário:", e);
     }
     return null;
   };
@@ -116,15 +101,13 @@ export default function App() {
   const tgId = user?.id?.toString() || "000000";
 
   useEffect(() => {
-    // Inicialização oficial do Telegram
-    try {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg) {
-        tg.ready();
-        tg.expand();
-      }
-    } catch (e) {}
-
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      if (tg.headerColor) tg.setHeaderColor('#08010f');
+      if (tg.backgroundColor) tg.setBackgroundColor('#08010f');
+    }
     setSdkReady(true);
   }, []);
 
@@ -136,11 +119,17 @@ export default function App() {
 
   const loadArtists = async () => {
     setLoading(true);
+    setError(null);
     try {
+      if (tgId === "000000") {
+        setError("Não foi possível identificar seu ID do Telegram. Certifique-se de que está acessando via Telegram.");
+        setLoading(false);
+        return;
+      }
+
       const data = await apiService.getArtistsByTg(tgId);
       setArtists(data);
       
-      // Auto-seleção amigável: se o usuário só tiver UM artista, já abre o dashboard dele
       if (data.length === 1 && !selectedArtist) {
         setSelectedArtist(data[0]);
         setScreen('dashboard');
@@ -152,6 +141,7 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
+      setError("Erro ao carregar dados. Verifique sua conexão ou tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -160,10 +150,9 @@ export default function App() {
   const handleActionSubmit = async () => {
     if (!selectedArtist) return;
     setLoading(true);
-    // Simulação de registro - no futuro pode integrar com uma rota de 'save_log' no seu script
-    safeHaptic(() => hapticFeedback.notificationOccurred('success'));
+    safeHaptic();
     alert(`Ação de "${actionCategory.toUpperCase()}" registrada para ${selectedArtist.nome}! Seus pontos serão processados.`);
-    await loadArtists(); // Recarrega para ver se houve mudança no status/saldo
+    await loadArtists(); 
     setScreen('dashboard');
     setLoading(false);
   };
@@ -198,18 +187,19 @@ export default function App() {
     setLoading(false);
   };
 
-  const safeHaptic = (action: () => void) => {
+  const safeHaptic = () => {
     try {
-      action();
-    } catch (e) {
-      console.warn('Haptic feedback error:', e);
-    }
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('light');
+      }
+    } catch (e) {}
   };
 
   const handleArtistClick = (artist: Artist) => {
     setSelectedArtist(artist);
     setScreen('dashboard');
-    safeHaptic(() => hapticFeedback.impactOccurred('light'));
+    safeHaptic();
   };
 
   const navigateBack = () => {
@@ -218,7 +208,7 @@ export default function App() {
     else if (screen === 'bater-ponto') setScreen('dashboard');
     else if (screen === 'charts' || screen === 'market') setScreen('home');
     else setScreen('home');
-    safeHaptic(() => hapticFeedback.impactOccurred('light'));
+    safeHaptic();
   };
 
   const formatCurrency = (val: number) => {
@@ -235,6 +225,25 @@ export default function App() {
             </div>
         </div>
       )}
+      {/* Error State */}
+      {error && (
+        <div className="fixed inset-0 z-[110] bg-[#08010f]/95 backdrop-blur-md flex items-center justify-center p-6">
+           <div className="glass-card p-6 text-center border-red-500/50">
+              <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
+              <h3 className="bebas text-2xl tracking-widest text-white mb-2">Ops! Algo deu errado</h3>
+              <p className="text-[10px] opacity-60 uppercase font-bold tracking-widest mb-6 leading-relaxed">
+                {error}
+              </p>
+              <button 
+                onClick={loadArtists}
+                className="flex items-center gap-2 justify-center w-full py-3 rounded-full bg-[var(--purple)] text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform"
+              >
+                <RefreshCw size={14} /> Tentar Novamente
+              </button>
+           </div>
+        </div>
+      )}
+
       {/* Background Decor */}
       <div className="ambient amb1"></div>
       <div className="ambient amb2"></div>
@@ -773,7 +782,7 @@ export default function App() {
           <NavButton active={screen === 'artists'} onClick={() => setScreen('artists')} icon={<Music size={20} />} label="Artistas" />
           <NavButton active={screen === 'charts'} onClick={() => setScreen('charts')} icon={<Trophy size={20} />} label="Ranking" />
           <NavButton active={screen === 'mgmt'} onClick={() => setScreen('mgmt')} icon={<Rocket size={20} />} label="Vila" />
-          <Settings onClick={() => safeHaptic(() => hapticFeedback.impactOccurred('medium'))} className="opacity-40 cursor-pointer active:scale-95" size={20} />
+          <Settings onClick={() => safeHaptic()} className="opacity-40 cursor-pointer active:scale-95" size={20} />
         </div>
       </footer>
     </div>
