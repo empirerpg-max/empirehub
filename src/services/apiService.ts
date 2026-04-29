@@ -4,12 +4,13 @@ export interface Artist {
   nome: string;
   foto: string;
   saldo: number;
-  fortuna_total: number; // Google Apps Script return name
-  fortunaTotal?: number; // Keep for safety if used elsewhere
+  fortuna_total: number;
+  fortunaTotal?: number;
   status: string;
   prestigio: number;
   fadiga: number;
   tour_info?: any;
+  gravadora?: string;
 }
 
 export const apiService = {
@@ -69,5 +70,55 @@ export const apiService = {
       console.error("Error market action:", error);
       return { status: "error", message: "Erro no Market" };
     }
+  },
+
+  getRadar: async () => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=radar`);
+      return await response.json();
+    } catch (e) { return []; }
+  },
+
+  getAllArtists: async () => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=listar_todos`);
+      return await response.json();
+    } catch (e) { return []; }
+  },
+
+  getHallOfFame: async () => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=hall_da_fama`);
+      return await response.json();
+    } catch (e) { return []; }
+  },
+
+  getFinances: async (nome: string, tipo: string) => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=financas&nome=${encodeURIComponent(nome)}&tipo=${tipo}`);
+      return await response.json();
+    } catch (e) { return []; }
+  },
+
+  getProjects: async (nome: string) => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=projetos&nome=${encodeURIComponent(nome)}`);
+      return await response.json();
+    } catch (e) { return []; }
+  },
+
+  getBetMusics: async () => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=musicas_bet`);
+      return await response.json();
+    } catch (e) { return { erro: "Erro ao carregar" }; }
+  },
+
+  submitBet: async (nome: string, valor: string, semana: string, previsoes: string) => {
+    try {
+      const url = `${SCRIPT_URL}?acao=bet&nome=${encodeURIComponent(nome)}&valor=${valor}&semana=${encodeURIComponent(semana)}&previsoes=${encodeURIComponent(previsoes)}`;
+      const response = await fetch(url);
+      return await response.text();
+    } catch (e) { return "Erro na rede"; }
   }
 };

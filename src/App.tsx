@@ -57,7 +57,7 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [tgId, setTgId] = useState<string>("000000");
-  const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'charts' | 'market' | 'feed' | 'labels' | 'duel' | 'hub' | 'finished-projects'>('home');
+  const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'charts' | 'market' | 'feed' | 'labels' | 'duel' | 'hub' | 'finished-projects' | 'ranking' | 'bet'>('home');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,6 +68,13 @@ export default function App() {
     type: 'tour' | 'cinema' | null;
     data: any;
   }>({ show: false, type: null, data: {} });
+  const [radarItems, setRadarItems] = useState<any[]>([]);
+  const [globalArtists, setAllArtists] = useState<Artist[]>([]);
+  const [hallOfFame, setHallOfFame] = useState<any[]>([]);
+  const [activeProjects, setActiveProjects] = useState<any[]>([]);
+  const [finishedProjects, setFinishedProjects] = useState<any[]>([]);
+  const [betMusics, setBetMusics] = useState<any[]>([]);
+  const [betForm, setBetForm] = useState({ valor: '1000', semana: '', previsoEs: '' });
 
   // Labels Data
   const labels = [
@@ -127,6 +134,28 @@ export default function App() {
       loadArtists();
     }
   }, [tgId, sdkReady]);
+
+  useEffect(() => {
+    if (screen === 'feed') {
+      apiService.getRadar().then(setRadarItems);
+    } else if (screen === 'charts') {
+      apiService.getAllArtists().then(setAllArtists);
+    } else if (screen === 'labels') {
+      apiService.getAllArtists().then(setAllArtists);
+    } else if (screen === 'mgmt' && selectedArtist) {
+      apiService.getProjects(selectedArtist.nome).then(projects => {
+        setActiveProjects(projects.filter((p: any) => p.status !== 'Finalizado'));
+      });
+    } else if (screen === 'finished-projects' && selectedArtist) {
+      apiService.getProjects(selectedArtist.nome).then(projects => {
+        setFinishedProjects(projects.filter((p: any) => p.status === 'Finalizado'));
+      });
+    } else if (screen === 'bet') {
+      apiService.getBetMusics().then(data => {
+        if (data && !data.erro) setBetMusics(Array.isArray(data) ? data : []);
+      });
+    }
+  }, [screen, selectedArtist]);
 
   const loadArtists = async () => {
     setLoading(true);
@@ -565,15 +594,29 @@ export default function App() {
 
                 {/* Ranking Global */}
                 <div 
-                  onClick={() => setScreen('charts')}
+                  onClick={() => setScreen('ranking')}
                   className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
                 >
                   <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 group-hover:bg-white group-hover:text-black transition-colors">
-                    <Globe size={24} />
+                    <Trophy size={24} />
                   </div>
                   <div>
                     <h3 className="font-bold text-sm uppercase tracking-tight">Ranking Global</h3>
-                    <p className="text-[10px] opacity-40 uppercase font-medium">Charts & Prestige</p>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">Líderes de Prestígio</p>
+                  </div>
+                </div>
+
+                {/* Charts */}
+                <div 
+                  onClick={() => setScreen('charts')}
+                  className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--purple)]/10 border border-[var(--purple)]/20 flex items-center justify-center text-[var(--purple)] group-hover:bg-[var(--purple)] group-hover:text-white transition-colors">
+                    <Music size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">Charts Musicais</h3>
+                    <p className="text-[10px] opacity-40 uppercase font-medium">Billboard, Spotify e mais</p>
                   </div>
                 </div>
 
@@ -599,7 +642,7 @@ export default function App() {
                  </div>
                  <p className="text-[10px] leading-relaxed">
                    Seu objetivo é tornar seu artista o #1 do mundo. 
-                   Registre atividades diárias (Bater Ponto) para ganhar Prestige e Empire Coins.
+                   Distribua pontos, invista em playlists e contrate tours para crescer seu império.
                  </p>
               </div>
             </motion.div>
@@ -786,7 +829,29 @@ export default function App() {
 
                     <div className="space-y-4">
                       <h3 className="bebas text-xl tracking-widest opacity-60">Projetos Ativos</h3>
-                      {selectedArtist.tour_info && selectedArtist.tour_info.nomeTour ? (
+                      {activeProjects.length > 0 ? (
+                        activeProjects.map((proj, pIdx) => (
+                          <div key={pIdx} className="glass-card p-6 border-l-4 border-l-[var(--gold)] relative overflow-hidden">
+                             <div className="absolute top-[-10px] right-[-10px] opacity-5">
+                               {proj.tipo === 'cinema' ? <Film size={80} /> : <Music size={80} />}
+                             </div>
+                             <span className="text-[10px] font-bold py-1 px-3 rounded-full bg-[var(--gold)]/10 text-[var(--gold)] uppercase border border-[var(--gold)]/20">
+                               🎤 {proj.categoria || 'Projeto'} Ativo
+                             </span>
+                             <h3 className="bebas text-2xl tracking-widest mt-4 mb-2">{proj.titulo}</h3>
+                             <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-[var(--border)]">
+                                  <div>
+                                      <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Previsão</span>
+                                      <span className="font-bold text-[var(--gold)]">{proj.data_inicio || 'N/A'}</span>
+                                  </div>
+                                  <div>
+                                      <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Total</span>
+                                      <span className="font-bold uppercase text-[var(--gold)]">{proj.status}</span>
+                                  </div>
+                             </div>
+                          </div>
+                        ))
+                      ) : selectedArtist.tour_info && selectedArtist.tour_info.nomeTour ? (
                         <div className="glass-card p-6 border-l-4 border-l-[var(--gold)] relative overflow-hidden">
                            <div className="absolute top-[-10px] right-[-10px] opacity-5">
                              <Music size={80} />
@@ -843,6 +908,36 @@ export default function App() {
              </motion.div>
           )}
 
+          {screen === 'charts' && (
+             <motion.div
+               key="charts"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="space-y-6"
+             >
+                <div className="text-center">
+                  <h2 className="bebas text-3xl tracking-widest text-center">CHARTS MUSICAIS</h2>
+                  <p className="text-[10px] opacity-40 uppercase tracking-widest">Desempenho da Semana</p>
+                </div>
+
+                <div className="glass-card p-10 text-center opacity-30 border-dashed border-2 border-[var(--border)]">
+                   <Music size={40} className="mx-auto mb-4" />
+                   <p className="text-xs uppercase font-bold tracking-widest">Dados dos Charts vindo do Google Sheets</p>
+                   <p className="text-[10px] mt-2">Billboard Hot 100, Spotify Global e Airplay</p>
+                </div>
+                
+                <div className="text-center py-4">
+                  <button 
+                    onClick={() => window.open('https://docs.google.com/spreadsheets/d/1ThRhljmAS41JmVBPkPtYwe0JQHRx9Pih2PQAPT2ebyA/edit', '_blank')}
+                    className="text-[10px] font-black uppercase text-[var(--purple)] border-b border-[var(--purple)]"
+                  >
+                    Ver Planilha Oficial de Charts
+                  </button>
+                </div>
+             </motion.div>
+          )}
+
           {screen === 'feed' && (
              <motion.div
                key="feed"
@@ -857,17 +952,24 @@ export default function App() {
                 </div>
 
                 <div className="space-y-3">
-                  {feedItems.map((item, idx) => (
-                    <div key={idx} className="glass-card p-4 border-l-2 border-l-[var(--purple)]">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-[10px] font-black text-white">{item.user}</span>
-                        <span className="text-[8px] opacity-30 font-bold uppercase">{item.time} atrás</span>
+                  {radarItems.length > 0 ? (
+                    radarItems.map((item, idx) => (
+                      <div key={idx} className="glass-card p-4 border-l-2 border-l-[var(--purple)]">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-[10px] font-black text-white">{item.user || 'Anônimo'}</span>
+                          <span className="text-[8px] opacity-30 font-bold uppercase">{item.time || ''}</span>
+                        </div>
+                        <p className="text-xs opacity-70">
+                          {item.action} para <span className="text-[var(--gold)] font-bold">{item.artist}</span>
+                        </p>
                       </div>
-                      <p className="text-xs opacity-70">
-                        {item.action} para <span className="text-[var(--gold)] font-bold">{item.artist}</span>
-                      </p>
+                    ))
+                  ) : (
+                    <div className="text-center py-20 opacity-20">
+                       <RefreshCw size={24} className="mx-auto mb-2 animate-spin-slow" />
+                       <p className="text-xs uppercase font-bold">Nenhuma atividade recente</p>
                     </div>
-                  ))}
+                  )}
                 </div>
                 
                 <div className="text-center py-10 opacity-30">
@@ -891,24 +993,29 @@ export default function App() {
                 </div>
 
                 <div className="space-y-4">
-                  {labels.map((label, idx) => (
-                    <div key={idx} className="glass-card p-5 relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Music size={40} />
-                      </div>
-                      <h3 className="bebas text-2xl tracking-widest text-white mb-1">{label.name}</h3>
-                      <p className="text-[10px] opacity-40 uppercase font-bold tracking-widest mb-4">Total Adquirido: <span className="text-[var(--gold)]">{formatCurrency(label.totalAcquired)}</span></p>
-                      
-                      <div className="pt-3 border-t border-white/5">
-                        <p className="text-[9px] opacity-30 uppercase font-black tracking-widest mb-2">Artistas no Selo</p>
-                        <div className="flex flex-wrap gap-2">
-                          {label.artists.map((art, aIdx) => (
-                            <span key={aIdx} className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[9px] font-bold text-white/50">{art}</span>
-                          ))}
+                  {["King & Queen", "Crown", "Independent"].map((labelName, idx) => {
+                    const labelArtists = globalArtists.filter(a => a.gravadora === labelName);
+                    return (
+                      <div key={idx} className="glass-card p-5 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                          <Music size={40} />
+                        </div>
+                        <h3 className="bebas text-2xl tracking-widest text-white mb-1 uppercase">{labelName}</h3>
+                        <p className="text-[10px] opacity-40 uppercase font-bold tracking-widest mb-4">
+                          Market Share: <span className="text-[var(--gold)]">{labelArtists.length} Artista(s)</span>
+                        </p>
+                        
+                        <div className="pt-3 border-t border-white/5">
+                          <p className="text-[9px] opacity-30 uppercase font-black tracking-widest mb-2">Artistas no Selo</p>
+                          <div className="flex flex-wrap gap-2">
+                            {labelArtists.length > 0 ? labelArtists.map((art, aIdx) => (
+                              <span key={aIdx} className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[9px] font-bold text-white/50">{art.nome}</span>
+                            )) : <span className="text-[9px] opacity-20 italic">Vazio</span>}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
              </motion.div>
           )}
@@ -976,7 +1083,7 @@ export default function App() {
              </motion.div>
           )}
 
-          {screen === 'charts' && (
+          {screen === 'ranking' && (
              <motion.div
                key="charts"
                initial={{ opacity: 0 }}
@@ -989,18 +1096,18 @@ export default function App() {
                   <p className="text-[10px] text-center opacity-40 uppercase tracking-[0.3em]">Os maiores Gestores da Empire</p>
                 </div>
 
-                {loading && artists.length === 0 ? (
+                {loading && globalArtists.length === 0 ? (
                   <div className="space-y-3">
                     {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--surface)] animate-pulse" />)}
                   </div>
-                ) : artists.length === 0 ? (
+                ) : globalArtists.length === 0 ? (
                    <div className="text-center py-20 opacity-30">
                       <Globe size={40} className="mx-auto mb-4" />
                       <p className="text-xs uppercase font-bold">Nenhum artista no ranking ainda</p>
                    </div>
                 ) : (
                   <div className="space-y-2">
-                    {artists.sort((a, b) => b.prestigio - a.prestigio).map((art, idx) => (
+                    {[...globalArtists].sort((a, b) => b.prestigio - a.prestigio).map((art, idx) => (
                       <div 
                         key={idx} 
                         className={cn(
@@ -1028,6 +1135,36 @@ export default function App() {
                     ))}
                   </div>
                 )}
+             </motion.div>
+          )}
+
+          {screen === 'charts' && (
+             <motion.div
+               key="charts"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="space-y-6"
+             >
+                <div className="text-center">
+                  <h2 className="bebas text-3xl tracking-widest text-center">CHARTS MUSICAIS</h2>
+                  <p className="text-[10px] opacity-40 uppercase tracking-widest">Desempenho da Semana</p>
+                </div>
+
+                <div className="glass-card p-10 text-center opacity-30 border-dashed border-2 border-[var(--border)]">
+                   <Music size={40} className="mx-auto mb-4" />
+                   <p className="text-xs uppercase font-bold tracking-widest">Dados dos Charts vindo do Google Sheets</p>
+                   <p className="text-[10px] mt-2">Billboard Hot 100, Spotify Global e Airplay</p>
+                </div>
+                
+                <div className="text-center py-4">
+                  <button 
+                    onClick={() => window.open('https://docs.google.com/spreadsheets/d/1ThRhljmAS41JmVBPkPtYwe0JQHRx9Pih2PQAPT2ebyA/edit', '_blank')}
+                    className="text-[10px] font-black uppercase text-[var(--purple)] border-b border-[var(--purple)]"
+                  >
+                    Ver Planilha Oficial de Charts
+                  </button>
+                </div>
              </motion.div>
           )}
 
@@ -1112,7 +1249,10 @@ export default function App() {
                    ].map((item, i) => (
                      <div 
                        key={i} 
-                       onClick={() => handleMarketClick(item.t, item.price)}
+                       onClick={() => {
+                         if (item.t === "Empire Bet") setScreen('bet');
+                         else handleMarketClick(item.t, item.price);
+                       }}
                        className="glass-card p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform"
                      >
                         <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
@@ -1145,9 +1285,29 @@ export default function App() {
                   <p className="text-[10px] opacity-40 uppercase tracking-widest">Histórico e Legado</p>
                 </div>
 
-                <div className="glass-card p-10 text-center border-dashed border-2 opacity-30">
-                   <p className="text-xs font-bold uppercase tracking-widest">Nenhum projeto concluído</p>
-                   <p className="text-[10px] mt-2 leading-relaxed">Artistas sem histórico de tours ou filmes finalizados ainda.</p>
+                <div className="space-y-4">
+                  {finishedProjects.length > 0 ? (
+                    finishedProjects.map((proj, pIdx) => (
+                      <div key={pIdx} className="glass-card p-5 border-l-4 border-l-[var(--purple)] flex items-center gap-4">
+                         <div className="w-12 h-12 rounded-full bg-[var(--purple)]/10 flex items-center justify-center text-[var(--purple)]">
+                           <Trophy size={20} />
+                         </div>
+                         <div className="flex-1">
+                           <h4 className="font-bold text-sm">{proj.titulo}</h4>
+                           <p className="text-[10px] opacity-40 uppercase font-black">{proj.categoria || 'Projeto'}</p>
+                         </div>
+                         <div className="text-right">
+                           <p className="text-[10px] font-bold text-[var(--gold)]">CONCLUÍDO</p>
+                           <p className="text-[8px] opacity-30">{proj.data_inicio || ''}</p>
+                         </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="glass-card p-10 text-center border-dashed border-2 opacity-30">
+                       <p className="text-xs font-bold uppercase tracking-widest">Nenhum projeto concluído</p>
+                       <p className="text-[10px] mt-2 leading-relaxed">Artistas sem histórico de tours ou filmes finalizados ainda.</p>
+                    </div>
+                  )}
                 </div>
              </motion.div>
           )}
