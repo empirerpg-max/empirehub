@@ -198,7 +198,7 @@ export default function App() {
             titulo: projectForm.data.titulo,
             tipo: projectForm.data.tipo,
             dataInicio: projectForm.data.dataInicio,
-            qtd: parseInt(projectForm.data.qtd || "0"),
+            qtd: parseInt(projectForm.data.qtd || "10"),
             continente: projectForm.data.continente
           })
         : await apiService.buyCinema({
@@ -209,13 +209,13 @@ export default function App() {
             dataInicio: projectForm.data.dataInicio
           });
       
-      if (resp.status === 'success') {
-        alert(`${projectForm.type.toUpperCase()} Iniciada! Verifique em Gestão.`);
+      const message = resp.message || (typeof resp === 'string' ? resp : "Operação finalizada.");
+      alert(message);
+
+      if (resp.status === 'success' || (typeof resp === 'string' && !resp.toLowerCase().includes('erro'))) {
         setProjectForm({ show: false, type: null, data: {} });
         setScreen('mgmt');
         loadArtists();
-      } else {
-        alert(resp.message || "Erro ao iniciar.");
       }
     } catch (e) {
       alert("Falha na conexão.");
@@ -747,7 +747,7 @@ export default function App() {
                 <p className="text-[10px] opacity-40 uppercase tracking-[0.3em] mb-1">Empire Coins (Saldo)</p>
                 <h3 className="text-3xl font-black text-[var(--gold)]">{formatCurrency(selectedArtist.saldo)}</h3>
                 <div className="mt-2 pt-2 border-t border-white/5">
-                   <p className="text-[9px] opacity-30 uppercase font-bold tracking-widest">Fortuna Acumulada: <span className="text-white/60">{formatCurrency(selectedArtist.fortunaTotal)}</span></p>
+                   <p className="text-[9px] opacity-30 uppercase font-bold tracking-widest">Fortuna Acumulada: <span className="text-white/60">{formatCurrency(selectedArtist.fortuna_total || selectedArtist.fortunaTotal || 0)}</span></p>
                 </div>
               </div>
 
@@ -781,14 +781,14 @@ export default function App() {
                   onClick={() => setScreen('mgmt')}
                 >
                    <LayoutGrid className={cn(screen === 'mgmt' ? "text-[var(--purple)]" : "opacity-40")} />
-                   <span className="text-[9px] font-bold uppercase text-center leading-tight">Gestão Projetos</span>
+                   <span className="text-[9px] font-bold uppercase text-center leading-tight">Gestão de Projetos</span>
                 </div>
                 <div 
                   className={cn("flex flex-col items-center gap-2 p-4 glass-card cursor-pointer transition-all", screen === 'finished-projects' ? "border-b-2 border-b-[var(--purple)]" : "")} 
                   onClick={() => setScreen('finished-projects')}
                 >
                    <Trophy className={cn(screen === 'finished-projects' ? "text-[var(--purple)]" : "opacity-40")} />
-                   <span className="text-[9px] font-bold uppercase text-center leading-tight">Projetos Finais</span>
+                   <span className="text-[9px] font-bold uppercase text-center leading-tight">Projetos Finalizados</span>
                 </div>
               </div>
             </motion.div>

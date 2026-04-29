@@ -41,7 +41,13 @@ export const apiService = {
     const url = `${SCRIPT_URL}?acao=compra_unificada_tour&nome=${encodeURIComponent(nome)}&tipo=${encodeURIComponent(tipo)}&titulo=${encodeURIComponent(titulo)}&dataInicio=${dataInicio}&qtd=${qtd}&continente=${continente}`;
     try {
       const response = await fetch(url);
-      return await response.json();
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        // Se não for JSON, é a mensagem de sucesso em texto
+        return { status: 'success', message: text };
+      }
     } catch (error) {
       console.error("Error buying tour:", error);
       return { status: 'error', message: "Erro de conexão." };
@@ -53,7 +59,12 @@ export const apiService = {
     const url = `${SCRIPT_URL}?acao=compra_cinema&nome=${encodeURIComponent(nome)}&titulo=${encodeURIComponent(titulo)}&tipo=${encodeURIComponent(tipo)}&genero=${encodeURIComponent(genero)}&dataInicio=${dataInicio}`;
     try {
       const response = await fetch(url);
-      return await response.json();
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        return { status: 'success', message: text };
+      }
     } catch (error) {
       console.error("Error buying cinema:", error);
       return { status: 'error', message: "Erro de conexão." };
