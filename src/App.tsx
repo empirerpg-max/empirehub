@@ -8,7 +8,7 @@ import {
   User, Wallet, Sparkles, MessageSquare, Bell, 
   Settings, Rocket, Zap, ChevronLeft, Globe, 
   Music, Film, Trophy, LayoutGrid, Info, Mic2, Store,
-  AlertTriangle, RefreshCw, X, FileText
+  AlertTriangle, RefreshCw, X, FileText, Target, Star, Circle, Apple, Youtube, DollarSign, ListMusic
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import React from 'react';
@@ -69,13 +69,25 @@ export default function App() {
     type: 'tour' | 'cinema' | null;
     data: any;
   }>({ show: false, type: null, data: {} });
+  const [releaseForm, setReleaseForm] = useState<{
+    show: boolean;
+    type: 'musica' | 'album' | 'viral' | 'filantropia' | null;
+    data: any;
+  }>({ show: false, type: null, data: {} });
   const [radarItems, setRadarItems] = useState<any[]>([]);
   const [globalArtists, setAllArtists] = useState<Artist[]>([]);
   const [hallOfFame, setHallOfFame] = useState<any[]>([]);
   const [activeProjects, setActiveProjects] = useState<any[]>([]);
   const [finishedProjects, setFinishedProjects] = useState<any[]>([]);
+  const [tourAgenda, setTourAgenda] = useState<any>(null);
   const [betMusics, setBetMusics] = useState<any[]>([]);
   const [betForm, setBetForm] = useState({ valor: '1000', semana: '', previsoEs: '' });
+  const [painelOff, setPainelOff] = useState<any>(null);
+  const [pontosPainel, setPontosPainel] = useState<any[]>([]);
+  const [selectedMusicForPoints, setSelectedMusicForPoints] = useState<any>(null);
+  const [distributionForm, setDistributionForm] = useState({ hot100: 0, spotify: 0, apple: 0, youtube: 0, digital: 0, bb200: 0 });
+  const [pontoForm, setPontoForm] = useState({ tipo: '', conteudo: '', codigo: '' });
+  const [artistMusics, setArtistMusics] = useState<string[]>([]);
 
   // Labels Data
   const labels = [
@@ -145,6 +157,23 @@ export default function App() {
       apiService.getProjects(selectedArtist.nome).then(projects => {
         setActiveProjects(projects.filter((p: any) => p.status !== 'Finalizado'));
       });
+      apiService.getPainelOff(tgId).then(setPainelOff);
+      apiService.getPontosPainel(tgId).then(setPontosPainel);
+
+      if (selectedArtist.status?.includes('Tour')) {
+        apiService.getTourAgenda(selectedArtist.nome).then(data => {
+          if (data && !data.erro) {
+            setTourAgenda(data);
+          } else {
+            console.warn("Tour agenda data issue:", data?.erro);
+            setTourAgenda(null);
+          }
+        });
+      } else {
+        setTourAgenda(null);
+      }
+    } else if (screen === 'ponto' && selectedArtist) {
+      apiService.getArtistMusicList(selectedArtist.nome).then(setArtistMusics);
     } else if (screen === 'finished-projects' && selectedArtist) {
       apiService.getProjects(selectedArtist.nome).then(projects => {
         setFinishedProjects(projects.filter((p: any) => p.status === 'Finalizado'));
@@ -155,6 +184,102 @@ export default function App() {
       });
     }
   }, [screen, selectedArtist]);
+
+  const handlePontoSubmit = async () => {
+    if (!painelOff?.off_name || !pontoForm.tipo) {
+      alert("❌ Nome do OFF e Tipo são obrigatórios.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const resp = await apiService.baterPonto({
+        nome_off: painelOff.off_name,
+        tipo: pontoForm.tipo,
+        conteudo: pontoForm.conteudo,
+        codigo: pontoForm.codigo
+      });
+      alert(resp);
+      if (resp.includes('✅')) {
+        setPontoForm({ tipo: '', conteudo: '', codigo: '' });
+        setScreen('mgmt');
+      }
+    } catch (e) {
+      alert("Erro ao bater ponto.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDistributionSubmit = async () => {
+    if (!selectedMusicForPoints) return;
+    const values = Object.values(distributionForm) as number[];
+    const total = values.reduce((a, b) => a + b, 0);
+    if (total > 1.1) {
+      alert("❌ A soma ultrapassa 100% significativamente. Reduza os valores.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const resp = await apiService.distribuirPontos({
+        musica: selectedMusicForPoints.musica,
+        linha: selectedMusicForPoints.linha,
+        hot100: distributionForm.hot100,
+        spotify: distributionForm.spotify,
+        apple: distributionForm.apple,
+        youtube: distributionForm.youtube,
+        digital: distributionForm.digital,
+        bb200: distributionForm.bb200
+      });
+      alert(resp);
+      if (resp.includes('✅')) {
+        setSelectedMusicForPoints(null);
+        apiService.getPontosPainel(tgId).then(setPontosPainel);
+      }
+    } catch (e) {
+      alert("Erro ao salvar pontos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReleaseSubmit = async () => {
+    if (!selectedArtist) return;
+    setLoading(true);
+    let resp;
+    try {
+      if (releaseForm.type === 'musica') {
+        resp = await apiService.registrarMusica({
+          nome: selectedArtist.nome,
+          musica: releaseForm.data.titulo,
+          genero: releaseForm.data.genero,
+          data: releaseForm.data.data
+        });
+      } else if (releaseForm.type === 'album') {
+        resp = await apiService.registrarAlbum({
+          nome: selectedArtist.nome,
+          album: releaseForm.data.titulo,
+          genero: releaseForm.data.genero,
+          data: releaseForm.data.data
+        });
+      } else if (releaseForm.type === 'viral') {
+        resp = await apiService.submitViral(selectedArtist.nome, releaseForm.data.titulo);
+      } else if (releaseForm.type === 'filantropia') {
+        resp = await apiService.submitFilantropia(selectedArtist.nome, releaseForm.data.causa, releaseForm.data.valor);
+      }
+      
+      const message = typeof resp === 'string' ? resp : (resp?.message || "Operação realizada.");
+      alert(message);
+      
+      if (message.includes('✅') || (!message.toLowerCase().includes('erro') && !message.includes('❌'))) {
+        setReleaseForm({ show: false, type: null, data: {} });
+        await loadArtists();
+      }
+    } catch (e) {
+      alert("Erro ao enviar registro. Verifique a conexão.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadArtists = async () => {
     setLoading(true);
@@ -169,14 +294,15 @@ export default function App() {
       const data = await apiService.getArtistsByTg(tgId);
       setArtists(data);
       
-      if (data.length === 1 && !selectedArtist) {
-        setSelectedArtist(data[0]);
-        setScreen('dashboard');
-      }
-
+      // Update selected artist to sync status/balance changes
       if (selectedArtist) {
         const updated = data.find(a => a.nome === selectedArtist.nome);
         if (updated) setSelectedArtist(updated);
+      }
+      
+      if (data.length === 1 && !selectedArtist) {
+        setSelectedArtist(data[0]);
+        setScreen('dashboard');
       }
     } catch (err) {
       console.error(err);
@@ -307,12 +433,8 @@ export default function App() {
     setLoading(true);
     safeHaptic();
     try {
-      const res = await apiService.marketAction({
-        nome: selectedArtist.nome,
-        acao: item,
-        valor: price
-      });
-      alert(`Solicitação de "${item}" enviada! Status: ${res.status || 'Processando'}`);
+      const res = await apiService.marketBuy(selectedArtist.nome, item);
+      alert(res); // GAS returns a string
       await loadArtists();
     } catch (e) {
       console.error(e);
@@ -384,6 +506,114 @@ export default function App() {
       {/* Content */}
       <main className="flex-1 overflow-y-auto px-6 py-4 relative z-10">
         <AnimatePresence mode="wait">
+           {releaseForm.show && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="fixed inset-0 z-[100] bg-[#08010f]/95 backdrop-blur-xl p-6 overflow-y-auto"
+            >
+               <button 
+                onClick={() => setReleaseForm({ show: false, type: null, data: {} })}
+                className="absolute top-6 right-6 p-2 bg-white/5 rounded-full"
+               >
+                 <X size={24} />
+               </button>
+
+               <div className="max-w-md mx-auto py-10 space-y-8">
+                  <div className="text-center">
+                    <h2 className="bebas text-4xl tracking-widest text-[var(--purple)]">
+                      {releaseForm.type === 'musica' ? 'REGISTRAR MÚSICA' : 
+                       releaseForm.type === 'album' ? 'REGISTRAR ÁLBUM' :
+                       releaseForm.type === 'viral' ? 'INICIAR VIRAL' : 'FILANTROPIA'}
+                    </h2>
+                    <p className="text-[10px] opacity-40 uppercase tracking-widest mt-2">
+                       {releaseForm.type === 'viral' ? 'Estratégia de crescimento orgânico' : 
+                        releaseForm.type === 'filantropia' ? 'Ações de caridade e prestígio' :
+                        'Alimente o sistema com sua nova obra'}
+                    </p>
+                  </div>
+
+                  <div className="glass-card p-6 space-y-6">
+                    <div className="space-y-4">
+                       {(releaseForm.type === 'musica' || releaseForm.type === 'album' || releaseForm.type === 'viral') && (
+                         <div className="space-y-1">
+                            <label className="text-[10px] uppercase font-bold opacity-40 ml-1">
+                              {releaseForm.type === 'viral' ? 'Título da Música' : 'Título da Obra'}
+                            </label>
+                            <input 
+                              type="text" 
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                              placeholder="Ex: My New Hit"
+                              value={releaseForm.data.titulo || ''}
+                              onChange={(e) => setReleaseForm({...releaseForm, data: {...releaseForm.data, titulo: e.target.value}})}
+                            />
+                         </div>
+                       )}
+
+                       {releaseForm.type === 'filantropia' && (
+                         <>
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Causa/Instituição</label>
+                              <input 
+                                type="text" 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                                placeholder="Ex: UNICEF, Cruz Vermelha"
+                                value={releaseForm.data.causa || ''}
+                                onChange={(e) => setReleaseForm({...releaseForm, data: {...releaseForm.data, causa: e.target.value}})}
+                              />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Valor da Doação</label>
+                              <input 
+                                type="number" 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                                placeholder="Ex: 50000"
+                                value={releaseForm.data.valor || ''}
+                                onChange={(e) => setReleaseForm({...releaseForm, data: {...releaseForm.data, valor: e.target.value}})}
+                              />
+                           </div>
+                         </>
+                       )}
+
+                       {(releaseForm.type === 'musica' || releaseForm.type === 'album') && (
+                         <>
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Gênero</label>
+                              <input 
+                                type="text" 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                                placeholder="Ex: Pop, Hip-Hop"
+                                value={releaseForm.data.genero || ''}
+                                onChange={(e) => setReleaseForm({...releaseForm, data: {...releaseForm.data, genero: e.target.value}})}
+                              />
+                           </div>
+
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Data de Lançamento</label>
+                              <input 
+                                type="date" 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                                value={releaseForm.data.data || ''}
+                                onChange={(e) => setReleaseForm({...releaseForm, data: {...releaseForm.data, data: e.target.value}})}
+                              />
+                           </div>
+                         </>
+                       )}
+
+                       <button 
+                        onClick={handleReleaseSubmit}
+                        disabled={loading || (releaseForm.type !== 'filantropia' && !releaseForm.data.titulo) || (releaseForm.type === 'filantropia' && (!releaseForm.data.causa || !releaseForm.data.valor))}
+                        className="w-full p-6 mt-4 rounded-2xl bg-gradient-to-r from-[var(--purple)] to-[#9f7aea] text-white font-black uppercase tracking-[0.2em] shadow-lg shadow-purple-500/20 active:scale-95 transition-all disabled:opacity-30"
+                       >
+                         {loading ? "Processando..." : "Confirmar Ação"}
+                       </button>
+                    </div>
+                  </div>
+               </div>
+            </motion.div>
+          )}
+
           {projectForm.show && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -780,6 +1010,7 @@ export default function App() {
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-20"></div>
                 <p className="text-[10px] opacity-40 uppercase tracking-[0.3em] mb-1">Empire Coins (Saldo)</p>
                 <h3 className="text-3xl font-black text-[var(--gold)]">{formatCurrency(selectedArtist.saldo)}</h3>
+                <p className="text-[8px] opacity-30 mt-1 uppercase leading-none font-bold italic">* Lembre-se: Para compras, o script utiliza 5% da sua Fortuna Real.</p>
                 <div className="mt-2 pt-2 border-t border-white/5">
                    <p className="text-[9px] opacity-30 uppercase font-bold tracking-widest">Fortuna Acumulada: <span className="text-white/60">{formatCurrency(selectedArtist.fortuna_total || selectedArtist.fortunaTotal || 0)}</span></p>
                 </div>
@@ -856,62 +1087,99 @@ export default function App() {
                         <h2 className="bebas text-3xl tracking-widest">MINHA VILA</h2>
                         <p className="text-[10px] opacity-40 uppercase tracking-widest">Gestão de {selectedArtist.nome}</p>
                       </div>
-                      <div className="w-10 h-10 rounded-full bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
-                        <Rocket size={20} />
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={loadArtists}
+                          disabled={loading}
+                          className="p-2 rounded-full bg-white/5 border border-white/10 active:rotate-180 transition-transform"
+                        >
+                          <RefreshCw size={18} className={cn(loading && "animate-spin")} />
+                        </button>
+                        <div className="w-10 h-10 rounded-full bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
+                          <Rocket size={20} />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <h3 className="bebas text-xl tracking-widest opacity-60">Projetos Ativos</h3>
-                      {activeProjects.length > 0 ? (
-                        activeProjects.map((proj, pIdx) => (
-                          <div key={pIdx} className="glass-card p-6 border-l-4 border-l-[var(--gold)] relative overflow-hidden">
+                      
+                      {/* Tours Section */}
+                      {tourAgenda && (
+                        <div className="space-y-4 mb-6">
+                          <div className="glass-card p-6 border-l-4 border-l-[var(--neon)] relative overflow-hidden">
                              <div className="absolute top-[-10px] right-[-10px] opacity-5">
-                               {proj.tipo === 'cinema' ? <Film size={80} /> : <Music size={80} />}
+                               <Music size={80} />
                              </div>
-                             <span className="text-[10px] font-bold py-1 px-3 rounded-full bg-[var(--gold)]/10 text-[var(--gold)] uppercase border border-[var(--gold)]/20">
-                               🎤 {proj.categoria || 'Projeto'} Ativo
-                             </span>
-                             <h3 className="bebas text-2xl tracking-widest mt-4 mb-2">{proj.titulo}</h3>
-                             <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-[var(--border)]">
+                             <span className="text-[10px] font-bold py-1 px-3 rounded-full bg-[var(--neon)]/10 text-[var(--neon)] uppercase border border-[var(--neon)]/20">🎤 Tour em Rota</span>
+                             <h2 className="bebas text-3xl tracking-widest mt-4 mb-2">{tourAgenda.nome_tour}</h2>
+                             <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-white/5">
                                   <div>
-                                      <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Previsão</span>
-                                      <span className="font-bold text-[var(--gold)]">{proj.data_inicio || 'N/A'}</span>
+                                      <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Arrecadação Total</span>
+                                      <span className="font-bold text-[var(--gold)]">{formatCurrency(tourAgenda.arrecadacao_total || 0)}</span>
                                   </div>
                                   <div>
-                                      <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Total</span>
-                                      <span className="font-bold uppercase text-[var(--gold)]">{proj.status}</span>
+                                      <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Show Atual</span>
+                                      <span className="font-bold uppercase text-[var(--neon)]">{tourAgenda.show_atual} de {tourAgenda.total_shows}</span>
                                   </div>
                              </div>
                           </div>
-                        ))
-                      ) : selectedArtist.tour_info && selectedArtist.tour_info.nomeTour ? (
-                        <div className="glass-card p-6 border-l-4 border-l-[var(--gold)] relative overflow-hidden">
-                           <div className="absolute top-[-10px] right-[-10px] opacity-5">
-                             <Music size={80} />
-                           </div>
-                           <span className="text-[10px] font-bold py-1 px-3 rounded-full bg-[var(--gold)]/10 text-[var(--gold)] uppercase border border-[var(--gold)]/20">🎤 Tour Ativa</span>
-                           <h3 className="bebas text-2xl tracking-widest mt-4 mb-2">{selectedArtist.tour_info.nomeTour}</h3>
-                           <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-[var(--border)]">
-                                <div>
-                                    <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Arrecadação</span>
-                                    <span className="font-bold text-[var(--gold)]">{formatCurrency(selectedArtist.tour_info.arrecadacao || 0)}</span>
+
+                          <div className="glass-card p-4 space-y-3">
+                            <h4 className="text-[10px] font-bold uppercase opacity-40 tracking-widest mb-2 px-2">Agenda Detalhada</h4>
+                            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                              {tourAgenda.agenda && tourAgenda.agenda.map((show: any, sIdx: number) => (
+                                <div key={sIdx} className={cn("p-3 rounded-xl border flex items-center justify-between", sIdx + 1 < tourAgenda.show_atual ? "bg-white/5 border-white/5 opacity-50" : sIdx + 1 === tourAgenda.show_atual ? "bg-[var(--purple)]/20 border-[var(--purple)]/40" : "bg-white/5 border-white/5")}>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-[10px] font-black opacity-30 w-4">#{sIdx + 1}</span>
+                                    <div>
+                                      <p className="text-[10px] font-bold">{show.local}</p>
+                                      <p className="text-[8px] opacity-40 uppercase">{show.data}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-[9px] font-bold text-[var(--gold)]">{formatCurrency(show.arrecadado || 0)}</p>
+                                    <p className="text-[8px] opacity-40 uppercase">Vendas: {show.vendidos?.toLocaleString()}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                    <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Progresso</span>
-                                    <span className="font-bold uppercase text-[var(--gold)]">Show {selectedArtist.tour_info.showAtual || 0}/{selectedArtist.tour_info.totalShows || 0}</span>
-                                </div>
-                           </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                      ) : (
+                      )}
+
+                      {/* Projects Section */}
+                      {activeProjects.length > 0 ? (
+                        activeProjects.map((proj, pIdx) => (
+                           <div key={pIdx} className="glass-card p-6 border-l-4 border-l-[var(--gold)] relative overflow-hidden">
+                              <div className="absolute top-[-10px] right-[-10px] opacity-5">
+                                {proj.tipo === 'cinema' ? <Film size={80} /> : <Music size={80} />}
+                              </div>
+                              <span className="text-[10px] font-bold py-1 px-3 rounded-full bg-[var(--gold)]/10 text-[var(--gold)] uppercase border border-[var(--gold)]/20">
+                                🎬 {proj.tipo || 'Projeto'} Ativo
+                              </span>
+                              <h3 className="bebas text-2xl tracking-widest mt-4 mb-2">{proj.titulo}</h3>
+                              <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-[var(--border)]">
+                                   <div>
+                                       <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Início</span>
+                                       <span className="font-bold text-[var(--gold)]">{proj.data_inicio || 'N/A'}</span>
+                                   </div>
+                                   <div>
+                                       <span className="text-[10px] opacity-40 uppercase block mb-1 tracking-widest">Status</span>
+                                       <span className="font-bold uppercase text-[var(--gold)]">{proj.status}</span>
+                                   </div>
+                              </div>
+                           </div>
+                        ))
+                      ) : !tourAgenda ? (
                         <div className="glass-card p-10 text-center opacity-30 border-dashed border-2 border-[var(--border)]">
                           <p className="text-xs uppercase font-bold tracking-widest">Nenhum projeto em andamento</p>
                           <p className="text-[10px] mt-2">Clique em um dos botões abaixo para começar</p>
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 pt-4">
+                    <div className="grid grid-cols-2 gap-4 pt-4 pb-8">
                        <button 
                         onClick={() => setProjectForm({ show: true, type: 'tour', data: { titulo: '', dataInicio: '', qtd: '10', continente: 'América do Sul', tipo: 'Arenas' } })}
                         className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
@@ -924,6 +1192,7 @@ export default function App() {
                             <p className="text-[8px] opacity-40 uppercase font-medium">Geração de saldo</p>
                          </div>
                        </button>
+
                        <button 
                         onClick={() => setProjectForm({ show: true, type: 'cinema', data: { titulo: '', tipo: 'Série', genero: 'Musical', dataInicio: '' } })}
                         className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
@@ -936,8 +1205,285 @@ export default function App() {
                             <p className="text-[8px] opacity-40 uppercase font-medium">Geração de prestígio</p>
                          </div>
                        </button>
+
+                       <button 
+                        onClick={() => setReleaseForm({ show: true, type: 'musica', data: { titulo: '', genero: '', data: '' } })}
+                        className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
+                       >
+                         <div className="w-10 h-10 rounded-xl bg-[var(--purple)]/10 flex items-center justify-center text-[var(--purple)]">
+                            <Mic2 size={20} />
+                         </div>
+                         <div>
+                            <span className="text-[10px] font-bold uppercase block tracking-tight">Lançar Single</span>
+                            <p className="text-[8px] opacity-40 uppercase font-medium">Registro de obra</p>
+                         </div>
+                       </button>
+
+                       <button 
+                        onClick={() => setReleaseForm({ show: true, type: 'album', data: { titulo: '', genero: '', data: '' } })}
+                        className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
+                       >
+                         <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
+                            <LayoutGrid size={20} />
+                         </div>
+                         <div>
+                            <span className="text-[10px] font-bold uppercase block tracking-tight">Lançar Álbum</span>
+                            <p className="text-[8px] opacity-40 uppercase font-medium">Registro completo</p>
+                         </div>
+                       </button>
+
+                       <button 
+                        onClick={() => setScreen('ponto')}
+                        className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
+                       >
+                         <div className="w-10 h-10 rounded-xl bg-[var(--purple)]/10 flex items-center justify-center text-[var(--purple)]">
+                            <FileText size={20} />
+                         </div>
+                         <div>
+                            <span className="text-[10px] font-bold uppercase block tracking-tight">Bater Ponto</span>
+                            <p className="text-[8px] opacity-40 uppercase font-medium">Ganhar pontos</p>
+                         </div>
+                       </button>
+
+                       <button 
+                        onClick={() => setScreen('estratégia')}
+                        className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
+                       >
+                         <div className="w-10 h-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
+                            <Target size={20} />
+                         </div>
+                         <div>
+                            <span className="text-[10px] font-bold uppercase block tracking-tight">Estratégia</span>
+                            <p className="text-[8px] opacity-40 uppercase font-medium">Distribuir pontos</p>
+                         </div>
+                       </button>
+
+                       <button 
+                        onClick={() => setReleaseForm({ show: true, type: 'viral', data: { titulo: '' } })}
+                        className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
+                       >
+                         <div className="w-10 h-10 rounded-xl bg-[var(--red)]/10 flex items-center justify-center text-[var(--red)]">
+                            <Zap size={20} />
+                         </div>
+                         <div>
+                            <span className="text-[10px] font-bold uppercase block tracking-tight">Viral</span>
+                            <p className="text-[8px] opacity-40 uppercase font-medium">Impulsionar obra</p>
+                         </div>
+                       </button>
+
+                       <button 
+                        onClick={() => setReleaseForm({ show: true, type: 'filantropia', data: { causa: '', valor: '' } })}
+                        className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
+                       >
+                         <div className="w-10 h-10 rounded-xl bg-[var(--purple)]/10 flex items-center justify-center text-[var(--purple)]">
+                            <Sparkles size={20} />
+                         </div>
+                         <div>
+                            <span className="text-[10px] font-bold uppercase block tracking-tight">Causas</span>
+                            <p className="text-[8px] opacity-40 uppercase font-medium">Filantropia</p>
+                         </div>
+                       </button>
+
+                       <button 
+                        onClick={() => setScreen('dashboard')}
+                        className="p-5 rounded-2xl bg-white/5 border border-white/5 text-left flex flex-col gap-3 active:scale-95 transition-transform"
+                       >
+                         <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white/40">
+                            <X size={20} />
+                         </div>
+                         <div>
+                            <span className="text-[10px] font-bold uppercase block tracking-tight opacity-40">Sair da Vila</span>
+                            <p className="text-[8px] opacity-20 uppercase font-medium">Painel Principal</p>
+                         </div>
+                       </button>
                     </div>
                   </>
+                )}
+             </motion.div>
+          )}
+
+          {screen === 'ponto' && selectedArtist && (
+             <motion.div
+               key="ponto"
+               initial={{ opacity: 0, x: 20 }}
+               animate={{ opacity: 1, x: 0 }}
+               exit={{ opacity: 0, x: -20 }}
+               className="p-6 space-y-8"
+             >
+                <div className="flex items-center justify-between">
+                   <button onClick={() => setScreen('mgmt')} className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-all font-bold uppercase text-[10px] tracking-widest">
+                     <ChevronLeft size={16} /> Voltar
+                   </button>
+                   <h2 className="bebas text-3xl tracking-widest text-[var(--purple)]">Bater Ponto</h2>
+                </div>
+
+                <div className="glass-card p-6 space-y-6">
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-[10px] opacity-40 uppercase font-bold tracking-widest mb-1">OFF Identificado</p>
+                      <p className="text-sm font-black text-[var(--purple)] uppercase">{painelOff?.off_name || 'Carregando...'}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-bold uppercase opacity-40 px-1">Tipo de Registro</label>
+                       <select 
+                        value={pontoForm.tipo}
+                        onChange={(e) => setPontoForm({...pontoForm, tipo: e.target.value})}
+                        className="w-full p-4 rounded-xl bg-white/5 border border-white/10 focus:border-[var(--purple)] outline-none appearance-none cursor-pointer text-white bg-zinc-900"
+                       >
+                         <option value="">Selecione o tipo...</option>
+                         <option value="EMPIRE HITS EM POST">EMPIRE HITS EM POST (Requer código)</option>
+                         <option value="EMPIRE HITS EM POST + ESTRÉIAS">EMPIRE HITS EM POST + ESTRÉIAS (Requer código)</option>
+                         <option value="POSTAGEM NORMAL">POSTAGEM NORMAL</option>
+                         <option value="TV/INTERVIEW">TV/INTERVIEW</option>
+                         <option value="RADIO AD">RADIO AD</option>
+                       </select>
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-bold uppercase opacity-40 px-1">Conteúdo (Música/Álbum)</label>
+                       <select 
+                        value={pontoForm.conteudo}
+                        onChange={(e) => setPontoForm({...pontoForm, conteudo: e.target.value})}
+                        className="w-full p-4 rounded-xl bg-white/5 border border-white/10 focus:border-[var(--purple)] outline-none text-white bg-zinc-900"
+                       >
+                         <option value="">Opcional: Selecione...</option>
+                         {artistMusics.map((m, idx) => <option key={idx} value={m}>{m}</option>)}
+                       </select>
+                    </div>
+
+                    {(pontoForm.tipo.includes('POST')) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase opacity-40 px-1 italic text-[var(--neon)]">Código de Validação</label>
+                        <input 
+                          type="text" 
+                          value={pontoForm.codigo}
+                          onChange={(e) => setPontoForm({...pontoForm, codigo: e.target.value})}
+                          placeholder="Insira seu código válido"
+                          className="w-full p-4 rounded-xl bg-white/5 border border-white/10 focus:border-[var(--neon)] outline-none"
+                        />
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={handlePontoSubmit}
+                      disabled={loading || !pontoForm.tipo}
+                      className="w-full p-6 mt-4 rounded-2xl bg-gradient-to-r from-[var(--purple)] to-[#9f7aea] text-white font-black uppercase tracking-[0.2em] shadow-lg shadow-purple-500/20 active:scale-95 transition-all disabled:opacity-30"
+                    >
+                      {loading ? "Processando..." : "Confirmar Registro"}
+                    </button>
+                  </div>
+                </div>
+             </motion.div>
+          )}
+
+          {screen === 'estratégia' && selectedArtist && (
+             <motion.div
+               key="estratégia"
+               initial={{ opacity: 0, x: 20 }}
+               animate={{ opacity: 1, x: 0 }}
+               exit={{ opacity: 0, x: -20 }}
+               className="p-6 space-y-8 pb-32"
+             >
+                <div className="flex items-center justify-between">
+                   <button onClick={() => setScreen('mgmt')} className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-all font-bold uppercase text-[10px] tracking-widest">
+                     <ChevronLeft size={16} /> Voltar
+                   </button>
+                   <h2 className="bebas text-3xl tracking-widest text-[var(--gold)]">Estratégia Musical</h2>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="bebas text-xl tracking-widest opacity-60">Escolha a Obra</h3>
+                  <div className="grid gap-3">
+                    {pontosPainel.length > 0 ? (
+                      pontosPainel.map((p, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => {
+                            setSelectedMusicForPoints(p);
+                            setDistributionForm({
+                              hot100: p.hot100 || 0,
+                              spotify: p.spotify || 0,
+                              apple: p.apple || 0,
+                              youtube: p.youtube || 0,
+                              digital: p.digital || 0,
+                              bb200: p.bb200 || 0
+                            });
+                          }}
+                          className={cn("p-5 glass-card border-l-4 transition-all cursor-pointer hover:bg-white/10", selectedMusicForPoints?.musica === p.musica ? "border-l-[var(--gold)] bg-white/10" : "border-l-white/10")}
+                        >
+                           <div className="flex justify-between items-start">
+                             <div>
+                               <p className="text-xs font-black uppercase">{p.musica}</p>
+                               <p className="text-[10px] opacity-40 uppercase">{p.act}</p>
+                             </div>
+                             <div className="text-right">
+                               <p className="text-[8px] opacity-40 uppercase">Disp. p/ OFF</p>
+                               <p className="text-xs font-bold text-[var(--neon)]">+{p.pontos_disponiveis?.toLocaleString()}</p>
+                             </div>
+                           </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="glass-card p-10 text-center opacity-30 border-dashed border-2 border-[var(--border)]">
+                        <p className="text-xs font-bold uppercase tracking-widest">Nenhuma música disponível para pontos</p>
+                        <p className="text-[10px] mt-2">Bata o ponto para gerar pontos para seu OFF.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {selectedMusicForPoints && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-card p-6 space-y-6"
+                  >
+                    <div className="flex justify-between items-center mb-6">
+                      <h4 className="bebas text-2xl tracking-widest text-[var(--gold)]">Distribuição: {selectedMusicForPoints.musica}</h4>
+                      <div className={cn("px-3 py-1 rounded-full text-[10px] font-black", (Object.values(distributionForm) as number[]).reduce((a, b) => a + b, 0) > 1.01 ? "bg-red-500/20 text-red-500" : "bg-[var(--gold)]/20 text-[var(--gold)]")}>
+                        {Math.floor((Object.values(distributionForm) as number[]).reduce((a, b) => a + b, 0) * 100)}% / 100%
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      {[
+                        { id: 'hot100', label: 'Billboard Hot 100', icon: <Star size={14} /> },
+                        { id: 'spotify', label: 'Spotify', icon: <Circle size={14} /> },
+                        { id: 'apple', label: 'Apple Music', icon: <Apple size={14} /> },
+                        { id: 'youtube', label: 'YouTube', icon: <Youtube size={14} /> },
+                        { id: 'digital', label: 'Digital Sales', icon: <DollarSign size={14} /> },
+                        { id: 'bb200', label: 'Billboard 200', icon: <ListMusic size={14} /> }
+                      ].map((field) => (
+                        <div key={field.id} className="space-y-2">
+                          <label className="text-[10px] uppercase font-bold opacity-40 flex items-center gap-1">
+                            {field.icon} {field.label}
+                          </label>
+                          <div className="relative">
+                            <input 
+                              type="number"
+                              step="0.05"
+                              min="0"
+                              max="1"
+                              value={distributionForm[field.id as keyof typeof distributionForm]}
+                              onChange={(e) => setDistributionForm({...distributionForm, [field.id]: parseFloat(e.target.value) || 0})}
+                              className="w-full p-4 rounded-xl bg-white/5 border border-white/10 focus:border-[var(--gold)] outline-none text-sm font-bold"
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20 text-[10px] font-black uppercase">PCT</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button 
+                      onClick={handleDistributionSubmit}
+                      disabled={loading}
+                      className="w-full p-6 mt-6 rounded-2xl bg-[var(--gold)] text-black font-black uppercase tracking-[0.2em] active:scale-95 transition-all disabled:opacity-30"
+                    >
+                      {loading ? "Salvando..." : "Confirmar Estratégia"}
+                    </button>
+                    <p className="text-[8px] opacity-30 text-center uppercase font-bold">* Utilize decimais (ex: 0.20 para 20%, 0.50 para 50%)</p>
+                  </motion.div>
                 )}
              </motion.div>
           )}

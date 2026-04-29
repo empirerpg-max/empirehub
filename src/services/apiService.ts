@@ -84,24 +84,46 @@ export const apiService = {
     }
   },
 
-  marketAction: async (params: { nome: string; acao: string; valor?: string }) => {
-    const { nome, acao, valor } = params;
-    const url = `${SCRIPT_URL}?acao=market_buy&nome=${encodeURIComponent(nome)}&item=${encodeURIComponent(acao)}&valor=${valor || ''}&_t=${Date.now()}`;
+  marketBuy: async (nome: string, itemId: string) => {
+    const url = `${SCRIPT_URL}?acao=comprar_item&nome=${encodeURIComponent(nome)}&itemId=${encodeURIComponent(itemId)}&_t=${Date.now()}`;
     try {
       const response = await fetch(url);
-      const text = await response.text();
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        return { 
-          status: (text.includes('❌') || text.toLowerCase().includes('erro')) ? 'error' : 'success', 
-          message: text 
-        };
-      }
-    } catch (error) {
-      console.error("Error market action:", error);
-      return { status: "error", message: "Erro no Market" };
-    }
+      return await response.text();
+    } catch (e) { return "Erro na rede"; }
+  },
+
+  submitViral: async (nome: string, musica: string) => {
+    const url = `${SCRIPT_URL}?acao=viral&nome=${encodeURIComponent(nome)}&musica=${encodeURIComponent(musica)}&_t=${Date.now()}`;
+    try {
+      const response = await fetch(url);
+      return await response.text();
+    } catch (e) { return "Erro na rede"; }
+  },
+
+  submitFilantropia: async (nome: string, causa: string, valor: string) => {
+    const url = `${SCRIPT_URL}?acao=filantropia&nome=${encodeURIComponent(nome)}&causa=${encodeURIComponent(causa)}&valor=${valor}&_t=${Date.now()}`;
+    try {
+      const response = await fetch(url);
+      return await response.text();
+    } catch (e) { return "Erro na rede"; }
+  },
+
+  registrarMusica: async (params: { nome: string; musica: string; genero: string; data: string }) => {
+    const { nome, musica, genero, data } = params;
+    const url = `${SCRIPT_URL}?acao=registrar_musica&nome=${encodeURIComponent(nome)}&musica=${encodeURIComponent(musica)}&genero=${encodeURIComponent(genero)}&data=${encodeURIComponent(data)}&_t=${Date.now()}`;
+    try {
+      const response = await fetch(url);
+      return await response.text();
+    } catch (e) { return "Erro ao registrar música."; }
+  },
+
+  registrarAlbum: async (params: { nome: string; album: string; genero: string; data: string }) => {
+    const { nome, album, genero, data } = params;
+    const url = `${SCRIPT_URL}?acao=registrar_album&nome=${encodeURIComponent(nome)}&album=${encodeURIComponent(album)}&genero=${encodeURIComponent(genero)}&data=${encodeURIComponent(data)}&_t=${Date.now()}`;
+    try {
+      const response = await fetch(url);
+      return await response.text();
+    } catch (e) { return "Erro ao registrar álbum."; }
   },
 
   getRadar: async () => {
@@ -139,6 +161,14 @@ export const apiService = {
     } catch (e) { return []; }
   },
 
+  getTourAgenda: async (nome: string) => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=agenda_tour&nome=${encodeURIComponent(nome)}&_t=${Date.now()}`);
+      const data = await response.json();
+      return data;
+    } catch (e) { return null; }
+  },
+
   getBetMusics: async () => {
     try {
       const response = await fetch(`${SCRIPT_URL}?acao=musicas_bet&_t=${Date.now()}`);
@@ -152,5 +182,47 @@ export const apiService = {
       const response = await fetch(url);
       return await response.text();
     } catch (e) { return "Erro na rede"; }
+  },
+
+  getPainelOff: async (tgId: string) => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=painel_off&telegram_id=${tgId}&_t=${Date.now()}`);
+      return await response.json();
+    } catch (e) { return { off_name: '', artistas: [] }; }
+  },
+
+  getPontosPainel: async (tgId: string) => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=pontos_painel&telegram_id=${tgId}&_t=${Date.now()}`);
+      return await response.json();
+    } catch (e) { return []; }
+  },
+
+  baterPonto: async (params: { nome_off: string; tipo: string; conteudo?: string; codigo?: string }) => {
+    const { nome_off, tipo, conteudo, codigo } = params;
+    const url = `${SCRIPT_URL}?acao=bater_ponto&nome_off=${encodeURIComponent(nome_off)}&tipo=${encodeURIComponent(tipo)}&conteudo=${encodeURIComponent(conteudo || '')}&codigo=${encodeURIComponent(codigo || '')}&_t=${Date.now()}`;
+    try {
+      const response = await fetch(url);
+      return await response.text();
+    } catch (e) { return "Erro na rede ao bater ponto."; }
+  },
+
+  distribuirPontos: async (params: any) => {
+    const query = new URLSearchParams({ 
+      acao: 'distribuir_pontos', 
+      ...params, 
+      _t: Date.now().toString() 
+    }).toString();
+    try {
+      const response = await fetch(`${SCRIPT_URL}?${query}`);
+      return await response.text();
+    } catch (e) { return "Erro ao salvar pontos."; }
+  },
+
+  getArtistMusicList: async (nome: string) => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?acao=lista_musicas&nome=${encodeURIComponent(nome)}&_t=${Date.now()}`);
+      return await response.json();
+    } catch (e) { return []; }
   }
 };
