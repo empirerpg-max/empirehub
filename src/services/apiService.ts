@@ -40,7 +40,7 @@ export const apiService = {
   buyTour: async (params: { nome: string; tipo: string; titulo: string; dataInicio: string; qtd: number; continente: string }) => {
     const { nome, tipo, titulo, dataInicio, qtd, continente } = params;
     const trimmedNome = nome.trim();
-    const url = `${SCRIPT_URL}?acao=compra_unificada_tour&nome=${encodeURIComponent(trimmedNome)}&tipo=${encodeURIComponent(tipo)}&titulo=${encodeURIComponent(titulo)}&dataInicio=${dataInicio}&qtd=${Math.floor(qtd)}&continente=${encodeURIComponent(continente)}&_t=${Date.now()}`;
+    const url = `${SCRIPT_URL}?acao=compra_unificada_tour&artista=${encodeURIComponent(trimmedNome)}&act_principal=${encodeURIComponent(trimmedNome)}&tipo=${encodeURIComponent(tipo)}&titulo=${encodeURIComponent(titulo)}&dataInicio=${dataInicio}&datas=${Math.floor(qtd)}&continente=${encodeURIComponent(continente)}&_t=${Date.now()}`;
     
     console.log(`[BUY TOUR] Requesting: ${trimmedNome} | Plan: ${titulo} | Dates: ${qtd}`);
 
@@ -66,7 +66,7 @@ export const apiService = {
 
   buyCinema: async (params: { nome: string; titulo: string; tipo: string; genero: string; dataInicio: string }) => {
     const { nome, titulo, tipo, genero, dataInicio } = params;
-    const url = `${SCRIPT_URL}?acao=compra_cinema&nome=${encodeURIComponent(nome)}&titulo=${encodeURIComponent(titulo)}&tipo=${encodeURIComponent(tipo)}&genero=${encodeURIComponent(genero)}&dataInicio=${dataInicio}&_t=${Date.now()}`;
+    const url = `${SCRIPT_URL}?acao=compra_cinema&artista=${encodeURIComponent(nome)}&act_principal=${encodeURIComponent(nome)}&titulo=${encodeURIComponent(titulo)}&tipo=${encodeURIComponent(tipo)}&genero=${encodeURIComponent(genero)}&dataInicio=${dataInicio}&_t=${Date.now()}`;
     try {
       const response = await fetch(url);
       const text = await response.text();
@@ -85,7 +85,7 @@ export const apiService = {
   },
 
   marketBuy: async (nome: string, itemId: string) => {
-    const url = `${SCRIPT_URL}?acao=comprar_item&nome=${encodeURIComponent(nome)}&itemId=${encodeURIComponent(itemId)}&_t=${Date.now()}`;
+    const url = `${SCRIPT_URL}?acao=comprar_item&artista=${encodeURIComponent(nome)}&itemId=${encodeURIComponent(itemId)}&_t=${Date.now()}`;
     try {
       const response = await fetch(url);
       return await response.text();
@@ -93,7 +93,7 @@ export const apiService = {
   },
 
   submitViral: async (nome: string, musica: string) => {
-    const url = `${SCRIPT_URL}?acao=viral&nome=${encodeURIComponent(nome)}&musica=${encodeURIComponent(musica)}&_t=${Date.now()}`;
+    const url = `${SCRIPT_URL}?acao=viral&artista=${encodeURIComponent(nome)}&musica=${encodeURIComponent(musica)}&_t=${Date.now()}`;
     try {
       const response = await fetch(url);
       return await response.text();
@@ -101,7 +101,7 @@ export const apiService = {
   },
 
   submitFilantropia: async (nome: string, causa: string, valor: string) => {
-    const url = `${SCRIPT_URL}?acao=filantropia&nome=${encodeURIComponent(nome)}&causa=${encodeURIComponent(causa)}&valor=${valor}&_t=${Date.now()}`;
+    const url = `${SCRIPT_URL}?acao=filantropia&artista=${encodeURIComponent(nome)}&causa=${encodeURIComponent(causa)}&valor=${valor}&_t=${Date.now()}`;
     try {
       const response = await fetch(url);
       return await response.text();
@@ -110,7 +110,7 @@ export const apiService = {
 
   registrarMusica: async (params: { nome: string; musica: string; genero: string; data: string }) => {
     const { nome, musica, genero, data } = params;
-    const url = `${SCRIPT_URL}?acao=registrar_musica&nome=${encodeURIComponent(nome)}&musica=${encodeURIComponent(musica)}&genero=${encodeURIComponent(genero)}&data=${encodeURIComponent(data)}&_t=${Date.now()}`;
+    const url = `${SCRIPT_URL}?acao=registrar_musica&artista=${encodeURIComponent(nome)}&act_principal=${encodeURIComponent(nome)}&musica=${encodeURIComponent(musica)}&genero=${encodeURIComponent(genero)}&data=${encodeURIComponent(data)}&_t=${Date.now()}`;
     try {
       const response = await fetch(url);
       return await response.text();
@@ -119,7 +119,7 @@ export const apiService = {
 
   registrarAlbum: async (params: { nome: string; album: string; genero: string; data: string }) => {
     const { nome, album, genero, data } = params;
-    const url = `${SCRIPT_URL}?acao=registrar_album&nome=${encodeURIComponent(nome)}&album=${encodeURIComponent(album)}&genero=${encodeURIComponent(genero)}&data=${encodeURIComponent(data)}&_t=${Date.now()}`;
+    const url = `${SCRIPT_URL}?acao=registrar_album&artista=${encodeURIComponent(nome)}&act_principal=${encodeURIComponent(nome)}&album=${encodeURIComponent(album)}&genero=${encodeURIComponent(genero)}&data=${encodeURIComponent(data)}&_t=${Date.now()}`;
     try {
       const response = await fetch(url);
       return await response.text();
@@ -149,21 +149,21 @@ export const apiService = {
 
   getFinances: async (nome: string, tipo: string) => {
     try {
-      const response = await fetch(`${SCRIPT_URL}?acao=financas&nome=${encodeURIComponent(nome)}&tipo=${tipo}&_t=${Date.now()}`);
+      const response = await fetch(`${SCRIPT_URL}?acao=finances&artista=${encodeURIComponent(nome)}&tipo=${tipo}&_t=${Date.now()}`);
       return await response.json();
     } catch (e) { return []; }
   },
 
   getProjects: async (nome: string) => {
     try {
-      const response = await fetch(`${SCRIPT_URL}?acao=projetos&nome=${encodeURIComponent(nome)}&_t=${Date.now()}`);
+      const response = await fetch(`${SCRIPT_URL}?acao=projetos&artista=${encodeURIComponent(nome)}&_t=${Date.now()}`);
       return await response.json();
     } catch (e) { return []; }
   },
 
   getTourAgenda: async (nome: string) => {
     try {
-      const response = await fetch(`${SCRIPT_URL}?acao=agenda_tour&nome=${encodeURIComponent(nome)}&_t=${Date.now()}`);
+      const response = await fetch(`${SCRIPT_URL}?acao=agenda_tour&artista=${encodeURIComponent(nome)}&_t=${Date.now()}`);
       const data = await response.json();
       return data;
     } catch (e) { return null; }
@@ -178,7 +178,7 @@ export const apiService = {
 
   submitBet: async (nome: string, valor: string, semana: string, previsoes: string) => {
     try {
-      const url = `${SCRIPT_URL}?acao=bet&nome=${encodeURIComponent(nome)}&valor=${valor}&semana=${encodeURIComponent(semana)}&previsoes=${encodeURIComponent(previsoes)}&_t=${Date.now()}`;
+      const url = `${SCRIPT_URL}?acao=bet&artista=${encodeURIComponent(nome)}&valor=${valor}&semana=${encodeURIComponent(semana)}&previsoes=${encodeURIComponent(previsoes)}&_t=${Date.now()}`;
       const response = await fetch(url);
       return await response.text();
     } catch (e) { return "Erro na rede"; }
@@ -221,7 +221,7 @@ export const apiService = {
 
   getArtistMusicList: async (nome: string) => {
     try {
-      const response = await fetch(`${SCRIPT_URL}?acao=lista_musicas&nome=${encodeURIComponent(nome)}&_t=${Date.now()}`);
+      const response = await fetch(`${SCRIPT_URL}?acao=lista_musicas&artista=${encodeURIComponent(nome)}&_t=${Date.now()}`);
       return await response.json();
     } catch (e) { return []; }
   }

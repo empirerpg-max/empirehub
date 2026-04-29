@@ -272,7 +272,9 @@ export default function App() {
       
       if (message.includes('✅') || (!message.toLowerCase().includes('erro') && !message.includes('❌'))) {
         setReleaseForm({ show: false, type: null, data: {} });
-        await loadArtists();
+        setTimeout(async () => {
+          await loadArtists();
+        }, 800);
       }
     } catch (e) {
       alert("Erro ao enviar registro. Verifique a conexão.");
@@ -340,7 +342,15 @@ export default function App() {
         alert("✅ " + message);
         setProjectForm({ show: false, type: null, data: {} });
         setScreen('mgmt');
-        loadArtists();
+        
+        // Give GAS a moment to update the sheet before refreshing
+        setTimeout(async () => {
+          await loadArtists();
+          if (projectForm.type === 'tour') {
+            const agenda = await apiService.getTourAgenda(selectedArtist.nome);
+            setTourAgenda(agenda);
+          }
+        }, 800);
       } else {
         alert(message);
         console.error("Project Error Details:", resp);
