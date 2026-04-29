@@ -138,9 +138,7 @@ export default function App() {
   useEffect(() => {
     if (screen === 'feed') {
       apiService.getRadar().then(setRadarItems);
-    } else if (screen === 'charts') {
-      apiService.getAllArtists().then(setAllArtists);
-    } else if (screen === 'labels') {
+    } else if (screen === 'charts' || screen === 'labels' || screen === 'ranking') {
       apiService.getAllArtists().then(setAllArtists);
     } else if (screen === 'mgmt' && selectedArtist) {
       apiService.getProjects(selectedArtist.nome).then(projects => {
@@ -212,7 +210,7 @@ export default function App() {
       const message = resp.message || (typeof resp === 'string' ? resp : "Operação finalizada.");
       alert(message);
 
-      if (resp.status === 'success' || (typeof resp === 'string' && !resp.toLowerCase().includes('erro'))) {
+      if (resp.status === 'success' || (typeof resp === 'string' && !resp.toLowerCase().includes('erro') && !resp.includes('❌'))) {
         setProjectForm({ show: false, type: null, data: {} });
         setScreen('mgmt');
         loadArtists();
@@ -222,6 +220,27 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBetSubmit = async () => {
+    if (!selectedArtist) return;
+    setLoading(true);
+    try {
+      const resp = await apiService.submitBet(
+        selectedArtist.nome,
+        betForm.valor,
+        betForm.semana,
+        betForm.previsoEs
+      );
+      alert(resp);
+      if (!resp.toLowerCase().includes('erro') && !resp.includes('❌')) {
+        setScreen('dashboard');
+        loadArtists();
+      }
+    } catch (e) {
+      alert("Erro ao enviar aposta.");
+    }
+    setLoading(false);
   };
 
   const safeHaptic = () => {
@@ -1163,6 +1182,78 @@ export default function App() {
                     className="text-[10px] font-black uppercase text-[var(--purple)] border-b border-[var(--purple)]"
                   >
                     Ver Planilha Oficial de Charts
+                  </button>
+                </div>
+             </motion.div>
+          )}
+
+          {screen === 'bet' && (
+             <motion.div
+               key="bet"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="space-y-6"
+             >
+                <div className="text-center">
+                  <h2 className="bebas text-3xl tracking-widest text-center">EMPIRE BET</h2>
+                  <p className="text-[10px] opacity-40 uppercase tracking-widest">Aposte no Hot 100 dessa semana</p>
+                </div>
+
+                <div className="glass-card p-6 space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Valor da Aposta ($EC)</label>
+                      <input 
+                        type="number" 
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                        value={betForm.valor}
+                        onChange={(e) => setBetForm({...betForm, valor: e.target.value})}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Selecione a Semana</label>
+                      <select 
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                        value={betForm.semana}
+                        onChange={(e) => setBetForm({...betForm, semana: e.target.value})}
+                      >
+                         <option value="">Selecione...</option>
+                         <option value="Semana 18 - Março">Semana 18 - Março</option>
+                         <option value="Semana 19 - Abril">Semana 19 - Abril</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Músicas do Top 10 (Radar)</label>
+                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2">
+                        {betMusics.map((m, idx) => (
+                          <div key={idx} className="p-3 bg-white/5 rounded-lg border border-white/5 text-[10px] flex justify-between items-center">
+                            <span>{m.musica} - {m.artista}</span>
+                            <span className="text-[var(--gold)] font-bold">{m.odds}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Minhas Previsões (#1, #2, #3...)</label>
+                      <textarea 
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none h-24"
+                        placeholder="Ex: 1. Starboy, 2. Flowers, 3. As It Was"
+                        value={betForm.previsoEs}
+                        onChange={(e) => setBetForm({...betForm, previsoEs: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={handleBetSubmit}
+                    disabled={loading || !betForm.semana || !betForm.previsoEs}
+                    className="w-full py-4 rounded-xl bg-[var(--purple)] text-white bebas text-xl tracking-widest active:scale-95 transition-transform"
+                  >
+                    {loading ? 'Processando...' : 'Registrar Aposta'}
                   </button>
                 </div>
              </motion.div>
