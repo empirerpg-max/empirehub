@@ -208,12 +208,15 @@ export default function App() {
           });
       
       const message = resp.message || (typeof resp === 'string' ? resp : "Operação finalizada.");
-      alert(message);
-
+      
       if (resp.status === 'success' || (typeof resp === 'string' && !resp.toLowerCase().includes('erro') && !resp.includes('❌'))) {
+        alert("✅ " + message);
         setProjectForm({ show: false, type: null, data: {} });
         setScreen('mgmt');
         loadArtists();
+      } else {
+        alert(message);
+        console.error("Project Error Details:", resp);
       }
     } catch (e) {
       alert("Falha na conexão.");

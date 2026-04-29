@@ -39,6 +39,9 @@ export const apiService = {
   buyTour: async (params: { nome: string; tipo: string; titulo: string; dataInicio: string; qtd: number; continente: string }) => {
     const { nome, tipo, titulo, dataInicio, qtd, continente } = params;
     const url = `${SCRIPT_URL}?acao=compra_unificada_tour&nome=${encodeURIComponent(nome)}&tipo=${encodeURIComponent(tipo)}&titulo=${encodeURIComponent(titulo)}&dataInicio=${dataInicio}&qtd=${qtd}&continente=${continente}&_t=${Date.now()}`;
+    
+    console.log("Requesting Tour Purchase:", { url });
+
     try {
       const response = await fetch(url);
       const text = await response.text();
@@ -46,15 +49,16 @@ export const apiService = {
         const result = JSON.parse(text);
         return result;
       } catch (e) {
-        // Se não for JSON, é a mensagem de sucesso ou erro em texto
+        // Handle text-based success/error messages from GAS
+        const isError = text.includes('❌') || text.toLowerCase().includes('erro') || text.toLowerCase().includes('insuficiente');
         return { 
-          status: (text.includes('❌') || text.toLowerCase().includes('erro')) ? 'error' : 'success', 
+          status: isError ? 'error' : 'success', 
           message: text 
         };
       }
     } catch (error) {
       console.error("Error buying tour:", error);
-      return { status: 'error', message: "Erro de conexão." };
+      return { status: 'error', message: "Erro de conexão ao servidor." };
     }
   },
 
