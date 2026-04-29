@@ -11,6 +11,7 @@ import {
   AlertTriangle, RefreshCw, X, FileText
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { cn } from './lib/utils';
 import { apiService, Artist } from './services/apiService';
 
@@ -217,9 +218,11 @@ export default function App() {
       } else {
         alert(message);
         console.error("Project Error Details:", resp);
+        loadArtists(); // Refresh to sync balance if there was a mismatch
       }
     } catch (e) {
       alert("Falha na conexão.");
+      loadArtists();
     } finally {
       setLoading(false);
     }
@@ -753,14 +756,23 @@ export default function App() {
                    </div>
                    <div className="absolute inset-[-4px] rounded-full bg-gradient-to-br from-[var(--purple)] to-[var(--gold)] animate-spin-slow opacity-50 shadow-[0_0_20px_rgba(188,19,254,0.3)]"></div>
                 </div>
-                <div>
-                  <h2 className="bebas text-4xl tracking-widest mb-1">{selectedArtist.nome}</h2>
-                  <div className="flex items-center justify-center gap-2">
-                    <div className={cn("w-2 h-2 rounded-full", selectedArtist.status === "Livre" ? "bg-[var(--green)]" : "bg-[var(--red)]")}></div>
-                    <span className="text-xs font-bold opacity-60 uppercase tracking-widest">
-                      {selectedArtist.status === "Livre" ? "Disponível" : selectedArtist.status}
-                    </span>
+                <div className="flex items-center justify-center gap-4">
+                  <div className="flex-1 text-center">
+                    <h2 className="bebas text-4xl tracking-widest mb-1">{selectedArtist.nome}</h2>
+                    <div className="flex items-center justify-center gap-2">
+                      <div className={cn("w-2 h-2 rounded-full", selectedArtist.status === "Livre" ? "bg-[var(--green)]" : "bg-[var(--red)]")}></div>
+                      <span className="text-xs font-bold opacity-60 uppercase tracking-widest">
+                        {selectedArtist.status === "Livre" ? "Disponível" : selectedArtist.status}
+                      </span>
+                    </div>
                   </div>
+                  <button 
+                    onClick={loadArtists}
+                    disabled={loading}
+                    className="p-3 rounded-full bg-white/5 border border-white/10 active:rotate-180 transition-transform duration-500"
+                  >
+                    <RefreshCw size={20} className={cn(loading && "animate-spin")} />
+                  </button>
                 </div>
               </div>
 

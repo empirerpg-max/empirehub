@@ -24,11 +24,12 @@ export const apiService = {
       // Mapeia para garantir que fortunaTotal e fortuna_total existam (compatibilidade)
       return artists.map((a: any) => ({
         ...a,
-        fortunaTotal: a.fortuna_total || a.fortunaTotal || 0,
-        fortuna_total: a.fortuna_total || a.fortunaTotal || 0,
-        fadiga: a.fadiga || 0,
-        prestigio: a.prestigio || 0,
-        saldo: a.saldo || 0
+        nome: (a.nome || '').trim(), // Trim name to avoid match issues
+        fortunaTotal: Number(a.fortuna_total || a.fortunaTotal || 0),
+        fortuna_total: Number(a.fortuna_total || a.fortunaTotal || 0),
+        fadiga: Number(a.fadiga || 0),
+        prestigio: Number(a.prestigio || 0),
+        saldo: Number(a.saldo || 0)
       }));
     } catch (error) {
       console.error("Error fetching artists:", error);
@@ -38,9 +39,10 @@ export const apiService = {
 
   buyTour: async (params: { nome: string; tipo: string; titulo: string; dataInicio: string; qtd: number; continente: string }) => {
     const { nome, tipo, titulo, dataInicio, qtd, continente } = params;
-    const url = `${SCRIPT_URL}?acao=compra_unificada_tour&nome=${encodeURIComponent(nome)}&tipo=${encodeURIComponent(tipo)}&titulo=${encodeURIComponent(titulo)}&dataInicio=${dataInicio}&qtd=${qtd}&continente=${continente}&_t=${Date.now()}`;
+    const trimmedNome = nome.trim();
+    const url = `${SCRIPT_URL}?acao=compra_unificada_tour&nome=${encodeURIComponent(trimmedNome)}&tipo=${encodeURIComponent(tipo)}&titulo=${encodeURIComponent(titulo)}&dataInicio=${dataInicio}&qtd=${Math.floor(qtd)}&continente=${encodeURIComponent(continente)}&_t=${Date.now()}`;
     
-    console.log("Requesting Tour Purchase:", { url });
+    console.log(`[BUY TOUR] Requesting: ${trimmedNome} | Plan: ${titulo} | Dates: ${qtd}`);
 
     try {
       const response = await fetch(url);
