@@ -40,10 +40,10 @@ export const apiService = {
     const url = `${SCRIPT_URL}?acao=compra_unificada_tour&nome=${encodeURIComponent(nome)}&tipo=${encodeURIComponent(tipo)}&titulo=${encodeURIComponent(titulo)}&dataInicio=${dataInicio}&qtd=${qtd}&continente=${continente}`;
     try {
       const response = await fetch(url);
-      return await response.text();
+      return await response.json();
     } catch (error) {
       console.error("Error buying tour:", error);
-      return "Erro de conexão.";
+      return { status: 'error', message: "Erro de conexão." };
     }
   },
 
@@ -52,23 +52,10 @@ export const apiService = {
     const url = `${SCRIPT_URL}?acao=compra_cinema&nome=${encodeURIComponent(nome)}&titulo=${encodeURIComponent(titulo)}&tipo=${encodeURIComponent(tipo)}&genero=${encodeURIComponent(genero)}&dataInicio=${dataInicio}`;
     try {
       const response = await fetch(url);
-      return await response.text();
+      return await response.json();
     } catch (error) {
       console.error("Error buying cinema:", error);
-      return "Erro de conexão.";
-    }
-  },
-
-  submitAction: async (params: { nome: string; acao: string; telegram_id: string }) => {
-    const { nome, acao, telegram_id } = params;
-    const url = `${SCRIPT_URL}?acao=registrar_ponto&nome=${encodeURIComponent(nome)}&tipo_acao=${encodeURIComponent(acao)}&telegram_id=${telegram_id}`;
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error submitting action:", error);
-      return { status: "error", message: "Conexão falhou" };
+      return { status: 'error', message: "Erro de conexão." };
     }
   },
 

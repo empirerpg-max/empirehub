@@ -8,7 +8,7 @@ import {
   User, Wallet, Sparkles, MessageSquare, Bell, 
   Settings, Rocket, Zap, ChevronLeft, Globe, 
   Music, Film, Trophy, LayoutGrid, Info, Mic2, Store,
-  AlertTriangle, RefreshCw
+  AlertTriangle, RefreshCw, X, FileText
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from './lib/utils';
@@ -57,13 +57,17 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [tgId, setTgId] = useState<string>("000000");
-  const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'bater-ponto' | 'charts' | 'market' | 'feed' | 'labels' | 'duel' | 'hub' | 'finished-projects'>('home');
+  const [screen, setScreen] = useState<'home' | 'artists' | 'dashboard' | 'mgmt' | 'tutorial' | 'charts' | 'market' | 'feed' | 'labels' | 'duel' | 'hub' | 'finished-projects'>('home');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [actionCategory, setActionCategory] = useState<string>('comentarios');
+  const [projectForm, setProjectForm] = useState<{
+    show: boolean;
+    type: 'tour' | 'cinema' | null;
+    data: any;
+  }>({ show: false, type: null, data: {} });
 
   // Labels Data
   const labels = [
@@ -154,61 +158,41 @@ export default function App() {
     }
   };
 
-  const handleActionSubmit = async () => {
-    if (!selectedArtist) return;
-    setLoading(true);
-    safeHaptic();
+  const handleStartProject = async () => {
+    if (!selectedArtist || !projectForm.type) return;
     
-    try {
-      const response = await apiService.submitAction({
-        nome: selectedArtist.nome,
-        acao: actionCategory,
-        telegram_id: tgId
-      });
-      
-      if (response && response.status === "success") {
-        alert(`Sucesso: ${response.message || 'Ação registrada!'}`);
-      } else {
-        alert(`Registrado: ${actionCategory.toUpperCase()} para ${selectedArtist.nome}`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Ação enviada para processamento.");
-    }
-
-    await loadArtists(); 
-    setScreen('dashboard');
-    setLoading(false);
-  };
-
-  const handleStartProject = async (type: 'tour' | 'cinema') => {
-    if (!selectedArtist) return;
     setLoading(true);
     try {
-      if (type === 'tour') {
-        await apiService.buyTour({
-          nome: selectedArtist.nome,
-          tipo: "Nacional",
-          titulo: `Tour de ${selectedArtist.nome}`,
-          dataInicio: new Date().toISOString().split('T')[0],
-          qtd: 10,
-          continente: "América do Sul"
-        });
+      const resp = projectForm.type === 'tour' 
+        ? await apiService.buyTour({
+            nome: selectedArtist.nome,
+            titulo: projectForm.data.titulo,
+            tipo: projectForm.data.tipo,
+            dataInicio: projectForm.data.dataInicio,
+            qtd: parseInt(projectForm.data.qtd || "0"),
+            continente: projectForm.data.continente
+          })
+        : await apiService.buyCinema({
+            nome: selectedArtist.nome,
+            titulo: projectForm.data.titulo,
+            tipo: projectForm.data.tipo,
+            genero: projectForm.data.genero,
+            dataInicio: projectForm.data.dataInicio
+          });
+      
+      if (resp.status === 'success') {
+        alert(`${projectForm.type.toUpperCase()} Iniciada! Verifique em Gestão.`);
+        setProjectForm({ show: false, type: null, data: {} });
+        setScreen('mgmt');
+        loadArtists();
       } else {
-        await apiService.buyCinema({
-          nome: selectedArtist.nome,
-          titulo: `Filme: ${selectedArtist.nome}`,
-          tipo: "Drama",
-          genero: "Musical",
-          dataInicio: new Date().toISOString().split('T')[0]
-        });
+        alert(resp.message || "Erro ao iniciar.");
       }
-      loadArtists();
-      setScreen('mgmt');
     } catch (e) {
-      console.error(e);
+      alert("Falha na conexão.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const safeHaptic = () => {
@@ -228,7 +212,7 @@ export default function App() {
 
   const navigateBack = () => {
     if (screen === 'dashboard') setScreen('artists');
-    else if (screen === 'mgmt' || screen === 'hub' || screen === 'finished-projects' || screen === 'bater-ponto') setScreen('dashboard');
+    else if (screen === 'mgmt' || screen === 'hub' || screen === 'finished-projects') setScreen('dashboard');
     else if (['feed', 'labels', 'duel', 'charts', 'market', 'artists', 'tutorial'].includes(screen)) setScreen('home');
     else setScreen('home');
     safeHaptic();
@@ -346,6 +330,131 @@ export default function App() {
       {/* Content */}
       <main className="flex-1 overflow-y-auto px-6 py-4 relative z-10">
         <AnimatePresence mode="wait">
+          {projectForm.show && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="fixed inset-0 z-[100] bg-[#08010f]/95 backdrop-blur-xl p-6 overflow-y-auto"
+            >
+               <button 
+                onClick={() => setProjectForm({ show: false, type: null, data: {} })}
+                className="absolute top-6 right-6 p-2 bg-white/5 rounded-full"
+               >
+                 <X size={24} />
+               </button>
+
+               <div className="max-w-md mx-auto py-10 space-y-8">
+                  <div className="text-center">
+                    <h2 className="bebas text-4xl tracking-widest text-[var(--purple)]">
+                      {projectForm.type === 'tour' ? 'CONTRATAR TOUR' : 'CINEMA & TV'}
+                    </h2>
+                    <p className="text-[10px] opacity-40 uppercase tracking-widest mt-2">
+                       Preencha os detalhes para lançar o projeto
+                    </p>
+                  </div>
+
+                  <div className="glass-card p-6 space-y-6">
+                    <div className="space-y-4">
+                       <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Título do Projeto</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                            placeholder="Ex: World Tour 2024"
+                            value={projectForm.data.titulo || ''}
+                            onChange={(e) => setProjectForm({...projectForm, data: {...projectForm.data, titulo: e.target.value}})}
+                          />
+                       </div>
+
+                       <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Data de Início</label>
+                          <input 
+                            type="date" 
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                            value={projectForm.data.dataInicio || ''}
+                            onChange={(e) => setProjectForm({...projectForm, data: {...projectForm.data, dataInicio: e.target.value}})}
+                          />
+                       </div>
+
+                       {projectForm.type === 'tour' ? (
+                         <>
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Quantidade de Datas</label>
+                              <input 
+                                type="number" 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                                value={projectForm.data.qtd || ''}
+                                onChange={(e) => setProjectForm({...projectForm, data: {...projectForm.data, qtd: e.target.value}})}
+                              />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Tipo de Local</label>
+                              <select 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none appearance-none"
+                                value={projectForm.data.tipo || ''}
+                                onChange={(e) => setProjectForm({...projectForm, data: {...projectForm.data, tipo: e.target.value}})}
+                              >
+                                 <option value="Clubs" className="bg-[#08010f]">Clubs/Casas de Show</option>
+                                 <option value="Arenas" className="bg-[#08010f]">Arenas</option>
+                                 <option value="Estádios" className="bg-[#08010f]">Estádios</option>
+                              </select>
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Continente Principal</label>
+                              <select 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none appearance-none"
+                                value={projectForm.data.continente || ''}
+                                onChange={(e) => setProjectForm({...projectForm, data: {...projectForm.data, continente: e.target.value}})}
+                              >
+                                 <option value="América do Sul" className="bg-[#08010f]">América do Sul</option>
+                                 <option value="América do Norte" className="bg-[#08010f]">América do Norte</option>
+                                 <option value="Europa" className="bg-[#08010f]">Europa</option>
+                                 <option value="Ásia" className="bg-[#08010f]">Ásia</option>
+                                 <option value="Mundial" className="bg-[#08010f]">Mundial</option>
+                              </select>
+                           </div>
+                         </>
+                       ) : (
+                         <>
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Tipo de Produção</label>
+                              <select 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none appearance-none"
+                                value={projectForm.data.tipo || ''}
+                                onChange={(e) => setProjectForm({...projectForm, data: {...projectForm.data, tipo: e.target.value}})}
+                              >
+                                 <option value="Filme" className="bg-[#08010f]">Filme</option>
+                                 <option value="Série" className="bg-[#08010f]">Série</option>
+                                 <option value="Reality" className="bg-[#08010f]">Reality Show</option>
+                              </select>
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold opacity-40 ml-1">Gênero</label>
+                              <input 
+                                type="text" 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[var(--purple)] outline-none"
+                                placeholder="Ex: Drama, Musical, Ação"
+                                value={projectForm.data.genero || ''}
+                                onChange={(e) => setProjectForm({...projectForm, data: {...projectForm.data, genero: e.target.value}})}
+                              />
+                           </div>
+                         </>
+                       )}
+                    </div>
+
+                    <button 
+                      onClick={handleStartProject}
+                      disabled={loading || !projectForm.data.titulo || !projectForm.data.dataInicio}
+                      className="w-full py-4 rounded-xl bg-[var(--purple)] text-white bebas text-xl tracking-widest shadow-lg shadow-[var(--purple)]/20 active:scale-95 transition-transform disabled:opacity-50"
+                    >
+                      {loading ? 'Processando...' : 'Lançar Projeto'}
+                    </button>
+                  </div>
+               </div>
+            </motion.div>
+          )}
+
           {screen === 'home' && (
             <motion.div
               key="home"
@@ -639,81 +748,9 @@ export default function App() {
                    <span className="text-[9px] font-bold uppercase text-center leading-tight">Projetos Finais</span>
                 </div>
               </div>
-
-              <div className="pt-4">
-                 <button 
-                  onClick={() => {
-                    setScreen('bater-ponto');
-                    safeHaptic();
-                  }}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-[var(--purple2)] to-[var(--purple)] text-white font-black text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-3"
-                 >
-                   <Zap size={20} />
-                   Bater o Ponto
-                 </button>
-              </div>
             </motion.div>
           )}
 
-          {screen === 'bater-ponto' && selectedArtist && (
-             <motion.div
-                key="bater-ponto"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="space-y-6"
-             >
-                <div className="text-center">
-                   <h2 className="bebas text-3xl tracking-widest mb-1">BATER O PONTO</h2>
-                   <p className="text-xs opacity-40 uppercase tracking-widest">Selecione a atividade realizada hoje</p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  {[
-                    { id: 'comentarios', icon: <MessageSquare size={20} />, label: "Comentários", desc: "Redes sociais, Portais, Fanbase", color: "var(--purple)" },
-                    { id: 'videos', icon: <Film size={20} />, label: "Vídeos/Clipes", desc: "YouTube, TikTok, Reels", color: "var(--neon)" },
-                    { id: 'shows', icon: <Music size={20} />, label: "Shows/Lives", desc: "Eventos, Rádio, Streamings", color: "var(--gold)" },
-                    { id: 'imprensa', icon: <Info size={20} />, label: "Imprensa", desc: "Matérias, Entrevistas, Blogs", color: "var(--green)" },
-                  ].map((cat) => (
-                    <div 
-                      key={cat.id}
-                      onClick={() => {
-                        setActionCategory(cat.id);
-                        safeHaptic();
-                      }}
-                      className={cn(
-                        "glass-card p-4 flex items-center gap-4 cursor-pointer border-2 transition-all relative overflow-hidden",
-                        actionCategory === cat.id ? "border-[var(--purple)] bg-[var(--purple)]/10" : "border-transparent"
-                      )}
-                    >
-                      {actionCategory === cat.id && (
-                        <motion.div 
-                          layoutId="active-bg" 
-                          className="absolute inset-0 bg-gradient-to-r from-[var(--purple)]/5 to-transparent z-0" 
-                        />
-                      )}
-                      <div className={cn("p-3 rounded-xl z-10", actionCategory === cat.id ? "bg-[var(--purple)] text-white" : "bg-[var(--surface2)] opacity-60")}>
-                        {cat.icon}
-                      </div>
-                      <div className="flex-1 z-10">
-                        <h4 className="font-bold text-sm tracking-tight">{cat.label}</h4>
-                        <p className="text-[10px] opacity-40 uppercase font-medium">{cat.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="pt-4">
-                  <button 
-                    disabled={loading}
-                    onClick={handleActionSubmit}
-                    className="w-full py-4 rounded-full bg-white text-black font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    {loading ? 'Processando...' : 'Confirmar Registro'}
-                  </button>
-                </div>
-             </motion.div>
-          )}
 
           {screen === 'mgmt' && (
              <motion.div
@@ -777,7 +814,7 @@ export default function App() {
 
                     <div className="grid grid-cols-2 gap-4 pt-4">
                        <button 
-                        onClick={() => handleStartProject('tour')}
+                        onClick={() => setProjectForm({ show: true, type: 'tour', data: { titulo: '', dataInicio: '', qtd: '10', continente: 'América do Sul', tipo: 'Arenas' } })}
                         className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
                        >
                          <div className="w-10 h-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
@@ -789,7 +826,7 @@ export default function App() {
                          </div>
                        </button>
                        <button 
-                        onClick={() => handleStartProject('cinema')}
+                        onClick={() => setProjectForm({ show: true, type: 'cinema', data: { titulo: '', tipo: 'Série', genero: 'Musical', dataInicio: '' } })}
                         className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-left flex flex-col gap-3 active:scale-95 transition-transform"
                        >
                          <div className="w-10 h-10 rounded-xl bg-[var(--neon)]/10 flex items-center justify-center text-[var(--neon)]">
@@ -1009,7 +1046,7 @@ export default function App() {
 
                 <div className="grid grid-cols-1 gap-3">
                   <div 
-                    onClick={() => handleStartProject('tour')}
+                    onClick={() => setProjectForm({ show: true, type: 'tour', data: { titulo: '', dataInicio: '', qtd: '10', continente: 'América do Sul', tipo: 'Arenas' } })}
                     className="glass-card p-5 border-l-4 border-l-[var(--gold)] flex items-center gap-5 cursor-pointer active:scale-95 transition-transform"
                   >
                     <div className="w-12 h-12 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
@@ -1022,7 +1059,7 @@ export default function App() {
                   </div>
 
                   <div 
-                    onClick={() => handleStartProject('cinema')}
+                    onClick={() => setProjectForm({ show: true, type: 'cinema', data: { titulo: '', tipo: 'Série', genero: 'Musical', dataInicio: '' } })}
                     className="glass-card p-5 border-l-4 border-l-[var(--neon)] flex items-center gap-5 cursor-pointer active:scale-95 transition-transform"
                   >
                     <div className="w-12 h-12 rounded-xl bg-[var(--neon)]/10 flex items-center justify-center text-[var(--neon)]">
@@ -1126,9 +1163,9 @@ export default function App() {
                <h2 className="bebas text-3xl tracking-widest">COMO CRESCER</h2>
                <div className="space-y-6">
                  {[
-                   { t: "1. Bater o Ponto", d: "Registre o que fez pelo seu artista: comentários, vídeos, performances. Cada tipo vale pontos exclusivos." },
-                   { t: "2. Distribuir Pontos", d: "Com os pontos ganhos, você decide como distribuí-los entre os charts (Billboard, Spotify, etc)." },
-                   { t: "3. eCoin + Investimento", d: "Invista seu saldo em playlists estratégicas para impulsionar a audiência do seu artista." }
+                   { t: "1. Distribuir Pontos", d: "Distribua os ganhos da semana entre os charts (Billboard, Spotify, etc)." },
+                   { t: "2. eCoin + Investimento", d: "Invista seu saldo em playlists estratégicas para impulsionar a audiência do seu artista." },
+                   { t: "3. Empire Hub", d: "Contrate tours e lance projetos cinematográficos para expandir sua fortuna e prestígio." }
                  ].map((step, idx) => (
                    <div key={idx} className="flex gap-5">
                       <div className="w-12 h-12 rounded-full bg-[var(--purple)]/20 border border-[var(--purple)]/40 flex items-center justify-center bebas text-xl text-[var(--purple)] shrink-0">
